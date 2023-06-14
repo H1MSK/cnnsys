@@ -1,6 +1,6 @@
 ThisBuild / version := "1.0"
 ThisBuild / scalaVersion := "2.12.16"
-ThisBuild / organization := "org.example"
+ThisBuild / organization := "cc.h1msk"
 
 val spinalVersion = "1.8.1"
 val spinalCore = "com.github.spinalhdl" %% "spinalhdl-core" % spinalVersion
