@@ -1,0 +1,34 @@
+// Load quantization params onto local BRAM
+Load
+    DDR_Addr=0x1234
+    Width=【All Quantization Param Size+Kernel Size】
+    LineCount=1
+    DDR_LineOffset=0
+    BRAM_Addr=0x0
+    Quantization_En=0
+
+// Install input quantization params
+Install_Param
+    BRAM_Addr=0x0
+    Len=【Input Quantization Param Size】
+    Target_Port=【Loader Input Quantization Port】
+
+// Install conv quant params
+Install_Param
+    BRAM_Addr=【Input Quantization Param Size】
+    Len=【Conv Core Quant Param Size】
+    Target_Port=【Conv Port】
+
+Load
+    DDR_Addr=0x5678
+    Width=40
+    Height=40
+    Channel=32
+    DDR_LineOffset=32*80 * 32bit / 8bit
+    BRAM_Addr=0x0
+    Quantization_En=1
+
+Conv
+    Padding=1,1
+    Dilation=1
+    Target_Core=0
