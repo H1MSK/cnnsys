@@ -34,7 +34,7 @@ case class ConvUnitConfig(
 
   assert(coreInDataBitWidth * coreInChannelCount * coreCount % 8 == 0)
   val unitInStreamConfig = Axi4StreamConfig(
-    dataWidth = coreInDataBitWidth * coreInChannelCount * coreCount / 8,
+    dataWidth = 1024 / 8,
     idWidth = -1,
     destWidth = -1,
     userWidth = -1,
@@ -46,7 +46,7 @@ case class ConvUnitConfig(
     useUser = false
   )
   val unitOutStreamConfig = unitInStreamConfig.copy(
-    dataWidth = coreOutDataBitWidth * coreOutChannelCount * coreCount / 8,
+    dataWidth = 1024 / 8,
     destWidth = 2,
     useDest = true,
     useLast = false,

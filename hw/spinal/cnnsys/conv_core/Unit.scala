@@ -44,25 +44,18 @@ case class Unit(config: ConvUnitConfig, sizeMapping: SizeMapping) extends Compon
   )
 
   private val din_stream_sel = RegInit(U(0, 1 bit))
-  private val din_demux = StreamDemux(din, din_stream_sel, 2)
+  private val din_as_stream_fragment = din.toBitStreamFragment()
+  private val din_demux = StreamDemux(din_as_stream_fragment, din_stream_sel, 2)
 
-  private val in_kernel_stream = Axi4Stream(
-    Axi4StreamConfig(
-      dataWidth = config.coreKernelDataBitWidth * config.coreInChannelCount * config.coreCount / 8,
-      useLast = true
-    )
-  )
-  private val in_kernel_adapter = Axi4StreamWidthAdapter(din_demux(0), in_kernel_stream, compact = false)
-  private val core_kernal_data = in_kernel_stream.payload.data.subdivideIn(config.coreCount slices)
+  private val in_kernel_stream =
+    Stream Fragment Bits(config.coreKernelDataBitWidth * config.coreInChannelCount * config.coreCount bits)
+  private val in_kernel_adapter = StreamFragmentWidthAdapter(din_demux(0), in_kernel_stream, order = LOWER_FIRST)
+  private val core_kernal_data = in_kernel_stream.payload.fragment.subdivideIn(config.coreCount slices)
 
-  private val in_data_stream = Axi4Stream(
-    Axi4StreamConfig(
-      dataWidth = config.coreInDataBitWidth * config.coreInChannelCount * config.coreCount / 8,
-      useLast = true
-    )
-  )
-  private val in_data_adapter = Axi4StreamWidthAdapter(din_demux(1), in_data_stream, compact = false)
-  private val core_in_data = in_data_stream.payload.data.subdivideIn(config.coreCount slices)
+  private val in_data_stream =
+    Stream Fragment Bits(config.coreInDataBitWidth * config.coreInChannelCount * config.coreCount bits)
+  private val in_data_adapter = StreamFragmentWidthAdapter(din_demux(1), in_data_stream, order = LOWER_FIRST)
+  private val core_in_data = in_data_stream.payload.fragment.subdivideIn(config.coreCount slices)
 
   private val cur_line_width_sel = RegInit(cores.head.line_width_sel.getZero)
   private val cur_dout_dest = RegInit(dout.dest.getZero)
@@ -76,7 +69,14 @@ case class Unit(config: ConvUnitConfig, sizeMapping: SizeMapping) extends Compon
     c.din.payload := din_slice
   })
 
-  dout.payload.data := Vec(cores.flatMap(_.dout.payload)).asBits
+  private val out_stream = Stream(Bits(config.coreOutDataBitWidth * config.coreOutChannelCount * config.coreCount bits))
+  private val dout_as_stream = Stream(Bits(dout.config.dataWidth * 8 bits))
+  dout_as_stream.ready := dout.ready
+  dout.valid := dout_as_stream.valid
+  dout.payload.data := dout_as_stream.payload
+  private val dout_width_adapter = StreamWidthAdapter(out_stream, dout_as_stream)
+
+  out_stream.payload := Vec(cores.flatMap(_.dout.payload)).asBits
   dout.payload.dest := cur_dout_dest
 
   assert(config.coreInDataBitWidth == config.coreKernelDataBitWidth)
@@ -90,7 +90,7 @@ case class Unit(config: ConvUnitConfig, sizeMapping: SizeMapping) extends Compon
   in_data_stream.ready := False
   cores.foreach(_.din.valid := False)
   cores.foreach(_.dout.ready := False)
-  dout.valid := False
+  out_stream.valid := False
 
   val fsm = new StateMachine {
     val idle = new State with EntryPoint
@@ -134,8 +134,8 @@ case class Unit(config: ConvUnitConfig, sizeMapping: SizeMapping) extends Compon
       .whenIsActive {
         in_data_stream.ready := Vec(cores.map(_.din.ready)).reduceBalancedTree(_ & _)
         cores.foreach(_.din.valid := in_data_stream.valid)
-        cores.foreach(_.dout.ready := dout.ready)
-        dout.valid := cores.head.dout.valid
+        cores.foreach(_.dout.ready := out_stream.ready)
+        out_stream.valid := cores.head.dout.valid
         when(in_data_stream.last) {
           goto(idle)
         }
