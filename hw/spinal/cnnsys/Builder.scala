@@ -1,18 +1,18 @@
 package cnnsys
 
-import cnnsys.conv_core.{Channel, ConvUnitConfig, Core, Unit}
+import cnnsys.conv_unit.{ConvChannel, ConvUnitConfig, ConvCore, ConvUnit}
 import spinal.core.IntToBuilder
 
 import scala.language.postfixOps
 
 object GenChannelVerilog extends App {
-  ProjectConfig.spinal.generateVerilog(Channel(ConvUnitConfig())).printPruned()
+  ProjectConfig.spinal.generateVerilog(ConvChannel(ConvUnitConfig())).printPruned()
 }
 
 object GenCoreVerilog extends App {
-  ProjectConfig.spinal.generateVerilog(Core(ConvUnitConfig())).printPruned()
+  ProjectConfig.spinal.generateVerilog(ConvCore(ConvUnitConfig())).printPruned()
 }
 
 object GenUnitVerilog extends App {
-  ProjectConfig.spinal.generateVerilog(Unit(ConvUnitConfig(), sizeMapping = (0x0000, 1 KiB))).printPruned()
+  ProjectConfig.spinal.generateVerilog(ConvUnit(ConvUnitConfig(), sizeMapping = (0x0000, 1 KiB))).printPruned()
 }

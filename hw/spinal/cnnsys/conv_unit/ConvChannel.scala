@@ -1,4 +1,4 @@
-package cnnsys.conv_core
+package cnnsys.conv_unit
 
 import lib.StreamController.StreamController
 import spinal.core._
@@ -34,15 +34,15 @@ import scala.language.postfixOps
   * ]}
   * }}}
   */
-case class Channel(config: ConvUnitConfig) extends Component {
-  val line_width_sel = in UInt (log2Up(config.supportedInputWidths.length) bits)
-  val din = slave Stream UInt(config.coreInDataBitWidth bits)
-  val dout = master Stream Vec(UInt(config.singleChannelSumDataBitWidth bits), config.coreOutChannelCount)
+case class ConvChannel(config: ConvUnitConfig) extends Component {
+  val line_width_sel = in Bits(log2Up(config.supportedInputWidths.length) bits)
+  val din = slave Stream SInt(config.unitInDataBitWidth bits)
+  val dout = master Stream Vec(Vec(SInt(config.productDataBitWidth bits), config.kernelSize * config.kernelSize), config.coreOutChannelCount)
 
-  val kernel_din = slave Flow UInt(config.coreKernelDataBitWidth bits)
+  val kernel_din = slave Flow SInt(config.unitKernelDataBitWidth bits)
 
   private val kernel = Seq.fill(config.coreOutChannelCount)(
-    KernelMem(config.kernelSize * config.kernelSize, config.coreKernelDataBitWidth)
+    ConvKernelMem(config.kernelSize * config.kernelSize, config.unitKernelDataBitWidth)
   )
   private var last_din = kernel_din
   kernel.reverse.foreach(k => {
@@ -54,10 +54,10 @@ case class Channel(config: ConvUnitConfig) extends Component {
   lineBufferStreamController << din
 
   private val lineBuffers = Array.fill(config.kernelSize - 1)(
-    LineBuffer(config)
+    ConvLineBuffer(config)
   )
   private val lastLineBuffer =
-    LineBuffer(config, hasShiftOutput = false)
+    ConvLineBuffer(config, hasShiftOutput = false)
   lineBuffers.foreach(_.line_width_sel := line_width_sel)
 
   private var last_data = din.payload
@@ -77,19 +77,19 @@ case class Channel(config: ConvUnitConfig) extends Component {
 
   assert(vec_inputs.length == kernel.head.regs.length)
 
-  private val mulAddTrees = Array.fill(config.coreOutChannelCount)(ConvCalculator(config))
+  private val convCalculator = Array.fill(config.coreOutChannelCount)(ConvCalculator(config))
 
-  lineBufferStreamController.oready := mulAddTrees(0).din.ready
+  lineBufferStreamController.oready := convCalculator(0).din.ready
 
   (0 until config.coreOutChannelCount).foreach(i => {
-    val mulAddTree_i = mulAddTrees(i)
+    val cc = convCalculator(i)
 
-    mulAddTree_i.kernel_in := kernel(i).regs
-    mulAddTree_i.din.payload := vec_inputs
-    mulAddTree_i.din.valid := lineBufferStreamController.ovalid
-    dout.payload(i) := mulAddTree_i.dout.payload
-    mulAddTree_i.dout.ready := dout.ready
+    cc.kernel_in := kernel(i).regs
+    cc.din.payload := vec_inputs
+    cc.din.valid := lineBufferStreamController.ovalid
+    dout.payload(i) := cc.dout.payload
+    cc.dout.ready := dout.ready
   })
 
-  dout.valid := mulAddTrees.head.dout.valid
+  dout.valid := convCalculator.head.dout.valid
 }
