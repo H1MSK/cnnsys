@@ -20,7 +20,7 @@ case class ConvCore(config: ConvUnitConfig) extends Component {
   val bias_data = slave Flow Vec(SInt(config.biasDataBitWidth bits), config.coreOutChannelCount)
   val dout = master Stream Vec(SInt(config.coreOutDataBitWidth bits), config.coreOutChannelCount)
 
-  private val reg_bias = bias_data.payload.map(RegNextWhen(_, bias_data.valid, init = S(0)))
+  private val reg_bias = Vec(bias_data.payload.map(RegNextWhen(_, bias_data.valid, init = S(0))))
 
   private val channels = Array.fill(config.coreInChannelCount)(ConvChannel(config))
 
@@ -60,7 +60,7 @@ case class ConvCore(config: ConvUnitConfig) extends Component {
   (0 until config.coreOutChannelCount).foreach(i => {
     addTrees(i).din.payload := Vec(channels.flatMap(_.dout.payload(i)).toSeq)
     addTrees(i).din.valid := channels(0).dout.valid
-    addTrees(i).bias := bias_data.payload(i)
+    addTrees(i).bias := reg_bias(i)
     addTrees(i).dout.ready := finalRequantizerChain.din.ready
   })
 
