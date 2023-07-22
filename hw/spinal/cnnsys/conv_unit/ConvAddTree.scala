@@ -6,15 +6,31 @@ import spinal.lib._
 
 import scala.language.postfixOps
 
-case class ConvAddTree(input_bit_width: Int, length: Int, register_distance: Int = 2, extend_bitwidth: Boolean = true) extends Component {
+case class ConvAddTree(
+    input_bit_width: Int,
+    length: Int,
+    register_distance: Int,
+    extend_bitwidth: Boolean,
+    use_bias: Boolean
+) extends Component {
   val din = slave Stream Vec(SInt(input_bit_width bits), length)
   val dout = master Stream SInt()
 
-  val bias = in SInt(input_bit_width bits)
+  val bias = use_bias generate SInt(input_bit_width bits)
+  if (use_bias) in(bias)
 
-  def add(a: SInt, b: SInt) = if(extend_bitwidth) a +^ b else a + b
+  def add(a: SInt, b: SInt) = if (extend_bitwidth) a +^ b else a + b
 
-  private val tree = TreeReduce.withRegs(din.payload.toSeq :+ bias, register_distance, add)
+  private val tree =
+    TreeReduce.withRegs(
+      if (use_bias) {
+        din.payload.toSeq :+ bias
+      } else {
+        din.payload.toSeq
+      },
+      register_distance,
+      add
+    )
 
   tree.controller << din
   tree.controller >> dout
