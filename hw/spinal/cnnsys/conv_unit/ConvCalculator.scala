@@ -16,14 +16,12 @@ case class ConvCalculator(config: ConvUnitConfig) extends Component {
 
   val dout = master Stream Vec(SInt(config.productDataBitWidth bits), config.kernelSize * config.kernelSize)
 
-  private val product_controller = StreamController(1)
+  val product_controller = StreamController(1)
 
   product_controller << din
 
-  private val products = Vec(kernel_in.indices.map(i => din.payload(i) * kernel_in(i)))
-  private val reg_products = RegNextWhen(products, product_controller.en(0))
-
-  private val addTree = ConvAddTree(input_bit_width = products.head.getBitsWidth, length = products.length)
+  val products = Vec(din.payload.zip(kernel_in).map(t => t._1 * t._2))
+  val reg_products = RegNextWhen(products, product_controller.en(0), init = products.getZero)
 
   product_controller >> dout
   dout.payload := reg_products
