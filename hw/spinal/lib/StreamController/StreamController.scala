@@ -11,16 +11,14 @@ case class StreamController(depth: Int) extends Component {
   val ovalid = out Bool()
   val oready = in Bool()
   val en = out Vec(Bool(), depth)
+  val full_bit = (depth == 1) generate Reg(Bool())
 
   if (depth == 1) {
-    val full_bit = Reg(Bool()) init false
-    full_bit.setName("full_bit")
-
+    full_bit init false
     iready := !full_bit || oready
     ovalid := full_bit
     full_bit := ivalid || (full_bit && !oready)
     en(0) := ivalid && (!full_bit || oready)
-
   } else {
     val controllers = Array.fill(depth)(StreamController(1))
     controllers.indices.foreach(i => controllers(i).setName("Controller_" + i))
