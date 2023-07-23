@@ -25,6 +25,7 @@ case class ConvUnitConfig() extends UnitConfig {
   val productDataBitWidth: Int = unitInDataBitWidth + unitKernelDataBitWidth  // 16
 
   val convAddTreeInputDataBitWidth: Int = productDataBitWidth
+  val addTreeRegisterDistance: Int = 2
 
   val requantizerScalerDataBitWidth: Int = 32
   val requantizerShifterDataBitWidth: Int = 8
