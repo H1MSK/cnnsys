@@ -6,9 +6,9 @@ import scala.collection.mutable
 import scala.util.Random
 import spinal.core._
 import spinal.lib._
-import test.TestTask
+import test.{TestTask, TestTaskGenerator}
 
-object TestConvAddTree {
+object TestConvAddTree extends TestTaskGenerator {
   private def testFor(bw: Int, length: Int, dist: Int, extend: Boolean, included: Boolean = true): Unit = {
     val task = new TestTask[ConvAddTree] {
       override def construct(): ConvAddTree =
@@ -96,8 +96,7 @@ object TestConvAddTree {
     if (!included) task.excludeFromAll()
   }
 
-
-  def prepare(included: Boolean = true): Unit = {
+  override def prepare(included: Boolean): Unit = {
     for (bw <- Array(4, 8, 12, 16)) {
       for (length <- Array(1, 2, 4, 6, 8, 16)) {
         for (dist <- 1 until 4) {

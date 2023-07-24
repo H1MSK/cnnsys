@@ -3,13 +3,13 @@ package test.lib.StreamController
 import spinal.core.sim._
 import cnnsys.ProjectConfig
 import lib.StreamController.StreamController
-import test.TestTask
+import test.{TestTask, TestTaskGenerator}
 
 import scala.collection.mutable
 import scala.util.Random
 
-object TestStreamController {
-  def prepare(included: Boolean): Unit = {
+object TestStreamController extends TestTaskGenerator {
+  override def prepare(included: Boolean): Unit = {
     var task = new TestTask[StreamController] {
       override def construct(): StreamController = {
         val dut = StreamController(1)

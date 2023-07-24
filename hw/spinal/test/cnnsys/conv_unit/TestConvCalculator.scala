@@ -3,14 +3,14 @@ package test.cnnsys.conv_unit
 import cnnsys.conv_unit.{ConvCalculator, ConvUnitConfig}
 import spinal.core._
 import spinal.core.sim._
-import test.TestTask
+import test.{TestTask, TestTaskGenerator}
 
 import scala.collection.mutable
 import scala.language.postfixOps
 import scala.util.Random
 
-object TestConvCalculator {
-  def prepare(included: Boolean): Unit = {
+object TestConvCalculator extends TestTaskGenerator {
+  override def prepare(included: Boolean): Unit = {
     val config = ConvUnitConfig()
     val task = new TestTask[ConvCalculator] {
       override def construct(): ConvCalculator = {

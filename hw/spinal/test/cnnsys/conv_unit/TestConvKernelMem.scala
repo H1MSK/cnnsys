@@ -3,13 +3,13 @@ package test.cnnsys.conv_unit
 import cnnsys.conv_unit.{ConvKernelMem, ConvUnitConfig}
 import spinal.core._
 import spinal.core.sim._
-import test.TestTask
+import test.{TestTask, TestTaskGenerator}
 
 import scala.collection.mutable
 import scala.language.postfixOps
 
-object TestConvKernelMem {
-  def prepare(included: Boolean): Unit = {
+object TestConvKernelMem extends TestTaskGenerator {
+  override def prepare(included: Boolean): Unit = {
     val config = ConvUnitConfig()
     new TestTask[ConvKernelMem] {
       override def construct(): ConvKernelMem =
