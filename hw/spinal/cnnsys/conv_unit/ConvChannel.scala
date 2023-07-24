@@ -1,6 +1,7 @@
 package cnnsys.conv_unit
 
 import lib.StreamController.StreamController
+import lib.WindowedHistory2D
 import spinal.core._
 import spinal.lib._
 
@@ -35,9 +36,12 @@ import scala.language.postfixOps
   * }}}
   */
 case class ConvChannel(config: ConvUnitConfig) extends Component {
-  val line_width_sel = in Bits(log2Up(config.supportedInputWidths.length) bits)
+  val line_width_sel = in Bits (log2Up(config.supportedInputWidths.length) bits)
   val din = slave Stream SInt(config.unitInDataBitWidth bits)
-  val dout = master Stream Vec(Vec(SInt(config.productDataBitWidth bits), config.kernelSize * config.kernelSize), config.coreOutChannelCount)
+  val dout = master Stream Vec(
+    Vec(SInt(config.productDataBitWidth bits), config.kernelSize * config.kernelSize),
+    config.coreOutChannelCount
+  )
 
   val kernel_din = slave Flow SInt(config.unitKernelDataBitWidth bits)
 
@@ -53,29 +57,18 @@ case class ConvChannel(config: ConvUnitConfig) extends Component {
   private val lineBufferStreamController = StreamController(1)
   lineBufferStreamController << din
 
-  private val lineBuffers = Array.fill(config.kernelSize - 1)(
-    ConvLineBuffer(config)
+  private val inputWindow = WindowedHistory2D(
+    line_count = config.kernelSize,
+    data_type = SInt(config.unitInDataBitWidth bits),
+    supported_input_widths = config.supportedInputWidths,
+    visible_input_count = config.kernelSize
   )
-  private val lastLineBuffer =
-    ConvLineBuffer(config, hasShiftOutput = false)
-  lineBuffers.foreach(_.line_width_sel := line_width_sel)
 
-  private var last_data = din.payload
-  if (lineBuffers.nonEmpty) {
-    lineBuffers.foreach(p => {
-      p.din.valid := lineBufferStreamController.en(0)
-      p.din.payload := last_data
-      last_data = p.dout
-    })
-  }
-  lastLineBuffer.din.payload := last_data
-  lastLineBuffer.din.valid := lineBufferStreamController.en(0)
+  inputWindow.shift_in.valid := lineBufferStreamController.en(0)
+  inputWindow.shift_in.payload := din.payload
+  inputWindow.line_width_sel := line_width_sel
 
-  private val input_nums = lineBuffers.flatMap(_.exports) ++ lastLineBuffer.exports
-
-  private val vec_inputs = Vec(input_nums)
-
-  assert(vec_inputs.length == kernel.head.regs.length)
+  assert(inputWindow.window.length == kernel.head.regs.length)
 
   private val convCalculator = Array.fill(config.coreOutChannelCount)(ConvCalculator(config))
 
@@ -85,7 +78,7 @@ case class ConvChannel(config: ConvUnitConfig) extends Component {
     val cc = convCalculator(i)
 
     cc.kernel_in := kernel(i).regs
-    cc.din.payload := vec_inputs
+    cc.din.payload := inputWindow.window
     cc.din.valid := lineBufferStreamController.ovalid
     dout.payload(i) := cc.dout.payload
     cc.dout.ready := dout.ready
