@@ -14,7 +14,7 @@ case class ConvUnitConfig() extends UnitConfig {
 
   // TODO: Annotation
   val kernelSize: Int = 3
-  val supportedInputWidths: Array[Int] = Array(3, 6, 11, 22)
+  val supportedInputWidths: Array[Int] = Array(3, 11, 22)
 
   // Element bit width (Specific data type is not cared here)
   // 元素位宽（此处不关心具体数据类型）
