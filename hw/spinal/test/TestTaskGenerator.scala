@@ -43,7 +43,7 @@ abstract class TestTaskGenerator {
         throw exception.get
       }
     } finally {
-      executer.get.shutdown()
+      executer.get.shutdownNow()
     }
   }
 
