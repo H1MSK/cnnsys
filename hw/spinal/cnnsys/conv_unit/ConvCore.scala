@@ -1,6 +1,6 @@
 package cnnsys.conv_unit
 
-import lib.quantizer.{Requantizer, RequantizerChain, RequantizerConfig, RequantizerParamBundle}
+import lib.quantizer.{RequantizerChain, RequantizerParamBundle}
 import spinal.core._
 import spinal.lib._
 
