@@ -36,7 +36,7 @@ case class RequantizerChain(
   })
 
   if (enableChainOut) {
-    out_param.payload := history_config.last
+    out_param.payload := history_config.head
     out_param.valid := param.valid
   }
   def apply(x: Int) = chain(x)
