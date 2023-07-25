@@ -16,3 +16,7 @@ object GenCoreVerilog extends App {
 object GenUnitVerilog extends App {
   ProjectConfig.spinal.generateVerilog(ConvUnit(ConvUnitConfig(), sizeMapping = (0x0000, 1 KiB))).printPruned()
 }
+
+object GenSystemVerilog extends App {
+  ProjectConfig.spinal.generateVerilog(System()).printPruned()
+}
