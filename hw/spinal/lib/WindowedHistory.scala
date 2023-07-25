@@ -40,7 +40,9 @@ case class WindowedHistory[T <: Data](
       in(line_width_sel)
 
       shift_out := line_width_sel.muxList(
-        supported_input_widths.indices.map(i => (i, history(supported_input_widths(i) - 1)))
+        supported_input_widths.indices
+          .map(i => i -> history(supported_input_widths(i) - 1))
+          .appended(default -> history(supported_input_widths.last - 1))
       )
     } else {
       shift_out := history(supported_input_widths.head - 1)
