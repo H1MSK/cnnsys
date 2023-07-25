@@ -6,5 +6,6 @@ case class RequantizerConfig(
     scale_bitwidth: Int,
     useOffset: Boolean = true,
     useRightShift: Boolean = true,
-    useOffsetSaturation: Boolean = true
+    useOffsetSaturation: Boolean = true,
+    useBundleBytePadding: Boolean = true
 ) {}
