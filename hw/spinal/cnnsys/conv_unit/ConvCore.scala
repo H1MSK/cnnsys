@@ -7,16 +7,10 @@ import spinal.lib._
 import scala.language.postfixOps
 
 case class ConvCore(config: ConvUnitConfig) extends Component {
-  val requantizer_config = RequantizerConfig(
-    config.requantizerInDataBitWidth,
-    config.requantizerOutDataBitWidth,
-    config.requantizerScalerDataBitWidth,
-    useOffset = false
-  )
   val line_width_sel = in Bits (log2Up(config.supportedInputWidths.length) bits)
   val din = slave Stream Vec(SInt(config.unitInDataBitWidth bits), config.coreInChannelCount)
   val kernel_data = slave Flow Vec(SInt(config.unitKernelDataBitWidth bits), config.coreInChannelCount)
-  val requantizer_param_in = slave Flow RequantizerParamBundle(requantizer_config)
+  val requantizer_param_in = slave Flow RequantizerParamBundle(config.requantizer_config)
   val bias_data = slave Flow Vec(SInt(config.biasDataBitWidth bits), config.coreOutChannelCount)
   val dout = master Stream Vec(SInt(config.coreOutDataBitWidth bits), config.coreOutChannelCount)
 
@@ -28,7 +22,7 @@ case class ConvCore(config: ConvUnitConfig) extends Component {
     chain_length = config.coreOutChannelCount,
     enableChainOut = false,
     parallel_count = 1,
-    config = requantizer_config
+    config = config.requantizer_config
   )
   finalRequantizerChain.param << requantizer_param_in
 

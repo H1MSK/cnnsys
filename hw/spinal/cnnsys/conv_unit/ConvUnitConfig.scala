@@ -1,6 +1,7 @@
 package cnnsys.conv_unit
 
 import cnnsys.UnitConfig
+import lib.quantizer.RequantizerConfig
 import spinal.core._
 import spinal.lib.bus.amba4.axis.Axi4StreamConfig
 
@@ -31,6 +32,13 @@ case class ConvUnitConfig() extends UnitConfig {
   val requantizerShifterDataBitWidth: Int = 8
   val requantizerInDataBitWidth: Int = 32
   val requantizerOutDataBitWidth: Int = coreOutDataBitWidth
+
+  val requantizer_config = RequantizerConfig(
+    requantizerInDataBitWidth,
+    requantizerOutDataBitWidth,
+    requantizerScalerDataBitWidth,
+    useOffset = false
+  )
 
   val biasDataBitWidth: Int = 16  // same as productDataBitWidth
 
