@@ -64,6 +64,8 @@ case class WindowedHistory2D[T <: Data](
   last_line.shift_in.payload := previous_shift_payload
   lines += last_line
 
+  lines.indices.foreach(i => lines(i).setName("line_" + i))
+
   /** Windowed data, in **row-major** order
     */
   val window = out Vec (data_type(), line_count * visible_input_count)
