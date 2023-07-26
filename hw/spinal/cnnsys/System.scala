@@ -3,6 +3,7 @@ package cnnsys
 import cnnsys.conv_unit.{ConvCore, ConvUnitConfig}
 import lib.FragmentRecorder
 import lib.quantizer.RequantizerParamBundle
+import lib.utils.XilinxBusTagger
 import spinal.core._
 import spinal.lib._
 import spinal.lib.bus.amba4.axis.{Axi4Stream, Axi4StreamConfig}
@@ -56,4 +57,10 @@ case class System() extends Component {
   connect(requantizer_param_stream, core.requantizer_param_in)
   connect(bias_data, core.bias_data)
   core.line_width_sel := line_width_sel
+
+  XilinxBusTagger.tag(din_stream, "din")
+  XilinxBusTagger.tag(kernel_data_stream, "kernel_data")
+  XilinxBusTagger.tag(requantizer_param_stream, "requantizer_data")
+  XilinxBusTagger.tag(bias_data, "bias_data")
+  XilinxBusTagger.tag(dout, "dout")
 }
