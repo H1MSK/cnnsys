@@ -8,7 +8,7 @@ object ConvUnitCoreCooperateMode extends SpinalEnum {
   val independent, pairExtend, fullExtend = newElement()
 }
 
-case class ConvUnitTask (config: ConvUnitConfig = ConvUnitConfig()) extends Bundle {
+case class ConvUnitTask (config: ConvUnitConfig = ConvUnitConfig.default) extends Bundle {
   val load_param = Bool()
   val width_sel = Bits(log2Up(config.supportedInputWidths.length) bits)
   val dest = UInt(config.unitOutStreamConfig.destWidth bits)

@@ -81,3 +81,7 @@ case class ConvUnitConfig() extends UnitConfig {
   val maxInputWidth: Int = supportedInputWidths.last
 
 }
+
+object ConvUnitConfig {
+  def default: ConvUnitConfig = ConvUnitConfig()
+}

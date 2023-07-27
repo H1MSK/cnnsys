@@ -25,7 +25,7 @@ case class System() extends Component {
     from.ready := True
     to.payload.assignFromBits(from.payload.asBits)
   }
-  val config = ConvUnitConfig()
+  val config = ConvUnitConfig.default
 
   val line_width_sel = in Bits (log2Up(config.supportedInputWidths.length) bits)
 

@@ -10,7 +10,7 @@ import scala.language.postfixOps
 
 object TestConvKernelMem extends TestTaskGenerator {
   override def prepare(included: Boolean): Unit = {
-    val config = ConvUnitConfig()
+    val config = ConvUnitConfig.default
     new TestTask[ConvKernelMem] {
       override def construct(): ConvKernelMem =
         ConvKernelMem(config.kernelSize * config.kernelSize, config.unitKernelDataBitWidth)
@@ -49,7 +49,8 @@ object TestConvKernelMem extends TestTaskGenerator {
                   simFailure(s"Kernel out #${i} is ${last_kernel(i)}, but want ${out}\n" +
                     s"generated = ${last_kernel.mkString(",")}\n" +
                     s"regs = ${dut.regs.map(_.toInt).mkString(",")}")
-              }})
+                }
+              })
             }
             kernel.indices.foreach(_ => out_data.dequeue())
 

@@ -11,7 +11,7 @@ import scala.util.Random
 
 object TestConvCalculator extends TestTaskGenerator {
   override def prepare(included: Boolean): Unit = {
-    val config = ConvUnitConfig()
+    val config = ConvUnitConfig.default
     val task = new TestTask[ConvCalculator] {
       override def construct(): ConvCalculator = {
         val dut = ConvCalculator(config)
