@@ -45,19 +45,19 @@ case class ConvChannel(config: ConvUnitConfig) extends Component {
 
   val kernel_din = slave Flow SInt(config.unitKernelDataBitWidth bits)
 
-  private val kernel = Seq.fill(config.coreOutChannelCount)(
+  val kernel = Seq.fill(config.coreOutChannelCount)(
     ConvKernelMem(config.kernelSize * config.kernelSize, config.unitKernelDataBitWidth)
   )
-  private var last_din = kernel_din
+  var last_din = kernel_din
   kernel.reverse.foreach(k => {
     last_din >> k.din
     last_din = k.dout
   })
 
-  private val lineBufferStreamController = StreamController(1)
+  val lineBufferStreamController = StreamController(1)
   lineBufferStreamController << din
 
-  private val inputWindow = WindowedHistory2D(
+  val inputWindow = WindowedHistory2D(
     line_count = config.kernelSize,
     data_type = SInt(config.unitInDataBitWidth bits),
     supported_input_widths = config.supportedInputWidths,
@@ -70,7 +70,7 @@ case class ConvChannel(config: ConvUnitConfig) extends Component {
 
   assert(inputWindow.window.length == kernel.head.regs.length)
 
-  private val convCalculator = Array.fill(config.coreOutChannelCount)(ConvCalculator(config))
+  val convCalculator = Array.fill(config.coreOutChannelCount)(ConvCalculator(config))
 
   lineBufferStreamController.oready := convCalculator(0).din.ready
 

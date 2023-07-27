@@ -14,11 +14,11 @@ case class ConvCore(config: ConvUnitConfig) extends Component {
   val bias_data = slave Flow Vec(SInt(config.biasDataBitWidth bits), config.coreOutChannelCount)
   val dout = master Stream Vec(SInt(config.coreOutDataBitWidth bits), config.coreOutChannelCount)
 
-  private val reg_bias = Vec(bias_data.payload.map(RegNextWhen(_, bias_data.valid, init = S(0))))
+  val reg_bias = Vec(bias_data.payload.map(RegNextWhen(_, bias_data.valid, init = S(0))))
 
-  private val channels = Array.fill(config.coreInChannelCount)(ConvChannel(config))
+  val channels = Array.fill(config.coreInChannelCount)(ConvChannel(config))
 
-  private val finalRequantizerChain = RequantizerChain(
+  val finalRequantizerChain = RequantizerChain(
     chain_length = config.coreOutChannelCount,
     enableChainOut = false,
     parallel_count = 1,
@@ -26,7 +26,7 @@ case class ConvCore(config: ConvUnitConfig) extends Component {
   )
   finalRequantizerChain.param << requantizer_param_in
 
-  private val addTrees =
+  val addTrees =
     Array.fill(config.coreOutChannelCount)(
       ConvAddTree(
         input_bit_width = config.convAddTreeInputDataBitWidth,
