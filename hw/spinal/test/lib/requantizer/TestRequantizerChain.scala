@@ -1,6 +1,6 @@
 package test.lib.requantizer
 
-import lib.quantizer.{RequantizerChain, RequantizerConfig}
+import lib.quantizer.{RequantizerChain, RequantizerConfig, RequantizerParamData}
 import spinal.core._
 import spinal.core.sim._
 import spinal.lib._
@@ -26,13 +26,8 @@ object TestRequantizerChain extends TestTaskGenerator {
             useOffsetSaturation = use_offset_saturation,
             useRightShift = use_right_shift
           )
-          class Param {
-            var scale: Int = 0
-            var offset: Int = 0
-            var shift_count: Int = 0
-          }
           val params = Array.fill(chain_length)(
-            new Param {
+            new RequantizerParamData {
               scale = if (use_scale) TestTask.randomSInt(16 bits) else -1
               offset = if (use_offset) TestTask.randomUInt(32 bits) else 0
               shift_count = if (use_right_shift) TestTask.randomUInt((if (use_scale) 5 else 4) bits) else 0
@@ -92,11 +87,11 @@ object TestRequantizerChain extends TestTaskGenerator {
                     failed = true
 
                   if (failed) {
-                    def format(p: Param) = s"{ scale=${p.scale}, offset=${p.offset}, shift=${p.shift_count} }"
+                    def format(p: RequantizerParamData) = s"{ scale=${p.scale}, offset=${p.offset}, shift=${p.shift_count} }"
                     simFailure(
                       s"Out param doesn't match:\n" +
                         "Want " + format(p) + ",\n" +
-                        s"but get " + format(new Param {
+                        s"but get " + format(new RequantizerParamData {
                           scale = if (use_scale) dut.out_param.payload.scale.toInt else -1
                           offset = if (use_offset) dut.out_param.payload.offset.toInt else 0
                           shift_count = if (use_right_shift) dut.out_param.payload.shift_count.toInt else 0
@@ -157,12 +152,7 @@ object TestRequantizerChain extends TestTaskGenerator {
             private def applyParams(dut: RequantizerChain): Unit = {
               params.foreach(p => {
                 dut.param.valid #= true
-                if (use_scale)
-                  dut.param.payload.scale #= p.scale
-                if (use_offset)
-                  dut.param.payload.offset #= p.offset
-                if (use_right_shift)
-                  dut.param.payload.shift_count #= p.shift_count
+                p.simApplyToBundle(dut.param)
                 dut.clockDomain.waitActiveEdge()
                 sleep(1)
               })
