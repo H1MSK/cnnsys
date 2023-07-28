@@ -1,119 +1,67 @@
 package cnnsys.conv_unit
 
+import lib.FragmentRecorder
+import lib.quantizer.RequantizerParamBundle
+import lib.utils.XilinxBusTagger
 import spinal.core._
 import spinal.lib._
-import spinal.lib.bus.amba4.axis.{Axi4Stream, Axi4StreamSimpleWidthAdapter}
-import spinal.lib.bus.misc.SizeMapping
-import spinal.lib.fsm._
+import spinal.lib.bus.amba4.axis.{Axi4Stream, Axi4StreamConfig}
 
 import scala.language.postfixOps
 
-case class ConvUnit(config: ConvUnitConfig, sizeMapping: SizeMapping) extends Component {
-  val ctrl = slave Stream ConvUnitTask()
-  val din = slave(Axi4Stream(config.unitInStreamConfig))
-  val conf_in = slave(Axi4Stream(config.unitInStreamConfig))
-  val dout = master(Axi4Stream(config.unitOutStreamConfig))
-  val intr = out(Reg(Bool())) init False
+case class ConvUnit(config: ConvUnitConfig) extends Component {
+  def genStreamPort(bitCount: BitCount, useLast: Boolean = false) = Axi4Stream(
+    Axi4StreamConfig((bitCount.value + 7) / 8, useLast = useLast)
+  )
 
-  private val conf_in_resized =
-    Axi4Stream(
-      conf_in.config.copy(dataWidth = config.unitKernelDataBitWidth * config.coreInChannelCount * config.coreCount / 8)
-    )
-
-  private val core_kernal_data = conf_in_resized.payload.data.subdivideIn(config.coreCount slices)
-
-  private val din_resized =
-    Axi4Stream(
-      din.config.copy(dataWidth = config.unitInDataBitWidth * config.coreInChannelCount * config.coreCount / 8)
-    )
-  private val core_in_data = din_resized.payload.data.subdivideIn(config.coreCount slices)
-
-  private val cur_width_sel = RegInit(ctrl.payload.width_sel.getZero)
-  private val cur_dout_dest = RegInit(ctrl.payload.dest.getZero)
-  private val cur_coop_mode = RegInit(ctrl.payload.coop_mode.getZero)
-  private val cur_do_mul_sigmoid = RegInit(ctrl.payload.do_mul_sigmoid.getZero)
-
-  private val dout_narrow = Axi4Stream(dout.config.copy(
-    dataWidth = config.unitOutDataBitWidth * config.coreOutChannelCount * config.coreCount / 8
-  ))
-
-  private val in_kernel_adapter = Axi4StreamSimpleWidthAdapter(conf_in, conf_in_resized)
-
-  private val in_data_adapter = Axi4StreamSimpleWidthAdapter(din, din_resized)
-
-  private val cores = Array.fill(config.coreCount)(ConvCore(config))
-
-  private val post_processor = ConvPostProcessor(config)
-
-  val doutWidthAdapter = Axi4StreamSimpleWidthAdapter(dout_narrow, dout)
-
-  cores.indices.foreach(i => {
-    val c = cores(i)
-    val kernel_din_slice = core_kernal_data(i).asSInt.subdivideIn(config.coreInChannelCount slices)
-    val din_slice = core_in_data(i).asSInt.subdivideIn(config.coreInChannelCount slices)
-    c.line_width_sel := cur_width_sel
-    c.kernel_data.payload := kernel_din_slice
-    c.din.payload := din_slice
-  })
-
-  ctrl.ready := False
-  conf_in_resized.ready := False
-  cores.foreach(_.kernel_data.valid := False)
-  din_resized.ready := False
-  cores.foreach(_.din.valid := False)
-  cores.foreach(_.dout.ready := False)
-
-  post_processor.dout.ready := dout_narrow.ready
-  dout_narrow.valid := post_processor.dout.valid
-  dout_narrow.payload.data := post_processor.dout.data
-  dout_narrow.payload.dest := cur_dout_dest
-  dout_narrow.payload.keep := post_processor.dout.keep
-
-  val fsm: StateMachine = new StateMachine {
-    val idle = new State with EntryPoint
-    val param_load = new State
-    val calculate = new State
-
-    idle.whenIsActive {
-      ctrl.ready := True
-      when(ctrl.valid) {
-        when(ctrl.load_param) {
-          goto(param_load)
-        }.otherwise {
-          goto(calculate)
-        }
-      }
-    }
-    idle.onExit {
-      cur_dout_dest := ctrl.payload.dest
-      cur_width_sel := ctrl.payload.width_sel
-      cur_coop_mode := ctrl.payload.coop_mode
-      cur_do_mul_sigmoid := ctrl.payload.do_mul_sigmoid
-      ctrl.ready := False
-      intr := False
-    }
-
-    param_load
-      .whenIsActive {
-        conf_in_resized.ready := True
-        cores.foreach(_.kernel_data.valid := conf_in_resized.valid)
-        when(conf_in_resized.last) {
-          goto(calculate)
-        }
-      }
-
-    calculate
-      .whenIsActive {
-        din_resized.ready := cores.head.din.ready
-        cores.foreach(_.din.valid := din_resized.valid)
-        cores.foreach(_.dout.ready := post_processor.din.ready)
-        post_processor.din.valid := cores.head.dout.valid
-        when(din_resized.last) {
-          goto(idle)
-        }
-      }
-      .onExit {
-        intr := True
-      }
+  def connect[T1 <: Data, T2 <: Data](from: Stream[T1], to: Stream[T2]) = {
+    to.arbitrationFrom(from)
+    to.payload.assignFromBits(from.payload.asBits)
   }
+
+  def connect[T1 <: Data, T2 <: Data](from: Stream[T1], to: Flow[T2]) = {
+    to.valid := from.valid
+    from.ready := True
+    to.payload.assignFromBits(from.payload.asBits)
+  }
+
+  val line_width_sel = in Bits (log2Up(config.supportedInputWidths.length) bits)
+
+  val din_stream = slave(genStreamPort(config.unitInDataBitWidth * config.coreInChannelCount bits, useLast = true))
+  val kernel_data_stream = slave(genStreamPort(config.unitKernelDataBitWidth * config.coreInChannelCount bits))
+  val requantizer_param_stream = slave(genStreamPort(RequantizerParamBundle(config.requantizer_config).getBitsWidth bits))
+  val bias_data = slave(genStreamPort(config.biasDataBitWidth * config.coreOutChannelCount bits))
+  val dout = master(genStreamPort(config.coreOutDataBitWidth * config.coreOutChannelCount bits, useLast = true))
+
+
+  val core = ConvCore(config)
+  val recorder = FragmentRecorder(
+    Vec(SInt(config.unitInDataBitWidth bits), config.coreInChannelCount),
+    Vec(SInt(config.coreOutDataBitWidth bits), config.coreOutChannelCount)
+  )
+
+  recorder.din_frags.arbitrationFrom(din_stream)
+  recorder.din_frags.fragment.assignFromBits(din_stream.payload.data)
+  recorder.din_frags.last := din_stream.payload.last
+
+  core.din.arbitrationFrom(recorder.din_stream)
+  core.din.payload := recorder.din_stream.payload
+
+  recorder.dout_stream.arbitrationFrom(core.dout)
+  recorder.dout_stream.payload.assignFromBits(core.dout.payload.asBits)
+
+  dout.arbitrationFrom(recorder.dout_frags)
+  dout.payload.data.assignFromBits(recorder.dout_frags.fragment.asBits)
+  dout.payload.last := recorder.dout_frags.last
+
+  connect(kernel_data_stream, core.kernel_data)
+  connect(requantizer_param_stream, core.requantizer_param_in)
+  connect(bias_data, core.bias_data)
+  core.line_width_sel := line_width_sel
+
+  XilinxBusTagger.tag(din_stream, "din")
+  XilinxBusTagger.tag(kernel_data_stream, "kernel_data")
+  XilinxBusTagger.tag(requantizer_param_stream, "requantizer_data")
+  XilinxBusTagger.tag(bias_data, "bias_data")
+  XilinxBusTagger.tag(dout, "dout")
 }
