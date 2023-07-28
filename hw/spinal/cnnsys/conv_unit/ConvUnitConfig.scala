@@ -9,45 +9,44 @@ import scala.language.postfixOps
 
 case class ConvUnitConfig() extends UnitConfig {
   // TODO: Annotation
-  val coreCount: Int = 4
-  val coreInChannelCount: Int = 8
-  val coreOutChannelCount: Int = 8
+  var coreCount: Int = 4
+  var coreInChannelCount: Int = 8
+  var coreOutChannelCount: Int = 8
 
   // TODO: Annotation
-  val kernelSize: Int = 3
-  val supportedInputWidths: Array[Int] = Array(3, 11, 22)
+  var kernelSize: Int = 3
+  var supportedInputWidths: Array[Int] = Array(3, 11, 22)
 
   // Element bit width (Specific data type is not cared here)
   // 元素位宽（此处不关心具体数据类型）
-  val unitInDataBitWidth: Int = 8
-  val unitKernelDataBitWidth: Int = 8
-  val coreOutDataBitWidth: Int = 8
+  var unitInDataBitWidth: Int = 8
+  var unitKernelDataBitWidth: Int = 8
+  var coreOutDataBitWidth: Int = 8
 
-  val productDataBitWidth: Int = unitInDataBitWidth + unitKernelDataBitWidth  // 16
+  def productDataBitWidth: Int = unitInDataBitWidth + unitKernelDataBitWidth  // 16
 
-  val convAddTreeInputDataBitWidth: Int = productDataBitWidth
-  val addTreeRegisterDistance: Int = 2
+  def convAddTreeInputDataBitWidth: Int = productDataBitWidth
+  def addTreeRegisterDistance: Int = 2
 
-  val requantizerScalerDataBitWidth: Int = 32
-  val requantizerShifterDataBitWidth: Int = 8
-  val requantizerInDataBitWidth: Int = 32
-  val requantizerOutDataBitWidth: Int = coreOutDataBitWidth
+  var requantizerScalerDataBitWidth: Int = 32
+  var requantizerShifterDataBitWidth: Int = 8
+  var requantizerInDataBitWidth: Int = 32
+  def requantizerOutDataBitWidth: Int = coreOutDataBitWidth
 
-  val requantizer_config = RequantizerConfig(
+  def requantizer_config = RequantizerConfig(
     requantizerInDataBitWidth,
     requantizerOutDataBitWidth,
     requantizerScalerDataBitWidth,
     useOffset = false
   )
 
-  val biasDataBitWidth: Int = 16  // same as productDataBitWidth
+  def biasDataBitWidth: Int = productDataBitWidth
 
-  val coreAdderTreeOutputDataBitWidth: Int = requantizerOutDataBitWidth + log2Up(coreInChannelCount)
+  def coreAdderTreeOutputDataBitWidth: Int = requantizerOutDataBitWidth + log2Up(coreInChannelCount)
 
-  val unitOutDataBitWidth: Int = 8
+  def unitOutDataBitWidth: Int = coreOutDataBitWidth
 
-
-  val unitInStreamConfig = Axi4StreamConfig(
+  def unitInStreamConfig = Axi4StreamConfig(
     dataWidth = unitInDataBitWidth * coreInChannelCount * coreCount,
     idWidth = -1,
     destWidth = -1,
