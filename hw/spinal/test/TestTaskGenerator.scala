@@ -64,6 +64,6 @@ abstract class TestTaskGenerator {
     }
 
     prepare(true)
-    runAll(Runtime.getRuntime.availableProcessors())
+    runAll(threadCount)
   }
 }
