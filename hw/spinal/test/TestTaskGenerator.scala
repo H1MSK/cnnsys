@@ -36,22 +36,21 @@ abstract class TestTaskGenerator {
       while (tasks.size != finishedTasks.get() && exception.isEmpty) {
         printState()
         Thread.sleep(20)
-      }
-
-      println(f"Simulation ${if (exception.isDefined) "failed" else "succeeded"}.")
-      if (exception.isDefined) {
-        throw exception.get
+        if (exception.isDefined) {
+          throw exception.get
+        }
       }
     } finally {
+      println(f"Simulation ${if (exception.isDefined) "failed" else "succeeded"}.")
       executer.get.shutdownNow()
     }
   }
 
   def printState(): Unit = {
-    print(f"Compiling: ${compilingTasks.get()}%-3d Running: ${runningTasks.get()}%-3d Compiled: ${
-      compiledTasks
-        .get()
-    }%-5d Finished:${finishedTasks.get()}%-5d/${tasks.size}%d\r")
+    print(
+      f"Compiling: ${compilingTasks.get()}%-3d Running: ${runningTasks.get()}%-3d " +
+        f"Compiled: ${compiledTasks.get()}%-5d Finished:${finishedTasks.get()}%-5d/${tasks.size}%d\r"
+    )
   }
 
   private val checkIncludedFunctioning = true
