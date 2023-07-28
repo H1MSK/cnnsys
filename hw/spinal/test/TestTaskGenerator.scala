@@ -54,7 +54,15 @@ abstract class TestTaskGenerator {
     }%-5d Finished:${finishedTasks.get()}%-5d/${tasks.size}%d\r")
   }
 
+  private val checkIncludedFunctioning = true
+  def threadCount: Int = Runtime.getRuntime.availableProcessors()
+
   def main(args: Array[String]): Unit = {
+    if (checkIncludedFunctioning) {
+      prepare(false)
+      assert(TestTask.tasks.isEmpty)
+    }
+
     prepare(true)
     runAll(Runtime.getRuntime.availableProcessors())
   }
