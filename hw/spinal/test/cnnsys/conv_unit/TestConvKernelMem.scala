@@ -11,7 +11,7 @@ import scala.language.postfixOps
 object TestConvKernelMem extends TestTaskGenerator {
   override def prepare(included: Boolean): Unit = {
     val config = ConvUnitConfig.default
-    new TestTask[ConvKernelMem] {
+    new TestTask[ConvKernelMem](included) {
       override def construct(): ConvKernelMem =
         ConvKernelMem(config.kernelSize * config.kernelSize, config.unitKernelDataBitWidth)
 

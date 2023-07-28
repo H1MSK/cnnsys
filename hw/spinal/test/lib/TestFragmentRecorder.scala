@@ -11,7 +11,7 @@ import scala.util.Random
 
 object TestFragmentRecorder extends TestTaskGenerator {
   override def prepare(included: Boolean): Unit = {
-    val task = new TestTask[BenchFragmentRecorder] {
+    new TestTask[BenchFragmentRecorder](included) {
       override def construct(): BenchFragmentRecorder = BenchFragmentRecorder()
 
       val data: Array[Int] = TestTask.randomUInt(8 bits, 256)

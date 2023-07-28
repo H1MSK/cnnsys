@@ -57,7 +57,7 @@ object TestRequantizerChain extends TestTaskGenerator {
               .toArray
           )
 
-          val task = new TestTask[RequantizerChain] {
+          new TestTask[RequantizerChain](included) {
             override def construct(): RequantizerChain = RequantizerChain(
               chain_length = chain_length,
               enableChainOut = true,
@@ -159,8 +159,6 @@ object TestRequantizerChain extends TestTaskGenerator {
               dut.param.valid #= false
             }
           }
-
-          if (!included) task.excludeFromAll()
         }
       }
     }

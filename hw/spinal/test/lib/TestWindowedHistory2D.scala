@@ -14,7 +14,7 @@ object TestWindowedHistory2D extends TestTaskGenerator {
       for (supported_input_widths <- Array(Array(6), Array(3, 6, 9, 12)))
         for (visible_input_count <- Array(1, 3)) {
 
-          val task = new TestTask[WindowedHistory2D[SInt]] {
+          new TestTask[WindowedHistory2D[SInt]](included) {
             override def construct(): WindowedHistory2D[SInt] = {
               WindowedHistory2D(
                 line_count = line_count,
@@ -83,8 +83,6 @@ object TestWindowedHistory2D extends TestTaskGenerator {
               })
             }
           }
-
-          if (!included) task.excludeFromAll()
         }
   }
 }

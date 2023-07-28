@@ -12,7 +12,7 @@ import scala.util.Random
 object TestConvCalculator extends TestTaskGenerator {
   override def prepare(included: Boolean): Unit = {
     val config = ConvUnitConfig.default
-    val task = new TestTask[ConvCalculator] {
+    new TestTask[ConvCalculator](included) {
       override def construct(): ConvCalculator = {
         val dut = ConvCalculator(config)
         dut.products.simPublic()
@@ -28,53 +28,66 @@ object TestConvCalculator extends TestTaskGenerator {
           dut.din.valid #= true
           dut.dout.ready #= true
 
-          var cur_in: Array[Int] =
-            TestTask.randomSInt(config.unitInDataBitWidth bits, length = config.kernelSize * config.kernelSize)
-          dut.din.payload.zip(cur_in).foreach(t => t._1 #= t._2)
-
           (0 until 128).foreach(iter_kernel => {
             val kernel = Array.fill(config.kernelSize * config.kernelSize)(
               TestTask.randomSInt(config.unitKernelDataBitWidth bits)
             )
             dut.kernel_in.zip(kernel).foreach(t => t._1 #= t._2)
 
-            val products = mutable.Queue[Array[Int]]()
+            val inputs = Array.fill(128)(
+              TestTask.randomSInt(config.unitInDataBitWidth bits, length = config.kernelSize * config.kernelSize)
+            )
 
-            var iter_input = 0
-            while(iter_input < 128) {
-              // dut.dout.ready #= Random.nextBoolean()
-              // dut.din.valid #= Random.nextBoolean()
+            val products = inputs.map(_.zip(kernel).map(t => t._1 * t._2))
+
+            var in_ptr = 0
+            var out_ptr = 0
+
+            var next_input = true
+
+            while (out_ptr < products.length) {
+              dut.dout.ready #= Random.nextBoolean()
+              dut.din.valid #= (in_ptr < products.length || !next_input) && Random.nextBoolean()
+
+              if (next_input) {
+                if (in_ptr < products.length) {
+                  next_input = false
+                  val cur_in = inputs(in_ptr)
+                  in_ptr += 1
+                  dut.din.payload.zip(cur_in).foreach(t => t._1 #= t._2)
+                } else {
+                  // keep it true to indicate input finished
+                  // next_input = true
+                  dut.din.payload.foreach(_ #= 0)
+                }
+              }
 
               dut.clockDomain.waitActiveEdge()
-              sleep(1)
 
               if (dut.din.valid.toBoolean && dut.din.ready.toBoolean) {
-                products.enqueue(cur_in.zip(kernel).map(t => t._1 * t._2))
-                cur_in =
-                  TestTask.randomSInt(config.unitInDataBitWidth bits, length = config.kernelSize * config.kernelSize)
-                dut.din.payload.zip(cur_in).foreach(t => t._1 #= t._2)
+                next_input = true
               }
 
               if (dut.dout.valid.toBoolean && dut.dout.ready.toBoolean) {
-                val that_products = products.dequeue()
+                val that_products = products(out_ptr)
                 that_products.indices.foreach(i => {
                   if (that_products(i) != dut.dout.payload(i).toInt) {
                     dut.clockDomain.waitActiveEdge()
-                    simFailure(f"Product answer does not match: want ${that_products(i)}, but get ${dut.dout.payload(i).toInt}b${dut.dout.payload(i).getBitsWidth}\n" +
-                      f"When checking #$i products in iter_input #$iter_input, iter_kernel #$iter_kernel.\n" +
-                      f"kernel=${kernel.mkString("(", ", ", ")")},\n" +
-                      f"products=${that_products.mkString("(", ", ", ")")},\n" +
-                      f"output=${dut.dout.payload.map(_.toInt).mkString("(", ", ", ")")}")
+                    simFailure(
+                      f"Product answer does not match: want ${that_products(i)}, but get ${dut.dout.payload(i).toInt}b${dut.dout.payload(i).getBitsWidth}\n" +
+                        f"iter_kernel=$iter_kernel, in_ptr=$in_ptr, out_ptr=$out_ptr.\n" +
+                        f"kernel=${kernel.mkString("(", ", ", ")")},\n" +
+                        f"products=${that_products.mkString("(", ", ", ")")},\n" +
+                        f"output=${dut.dout.payload.map(_.toInt).mkString("(", ", ", ")")}"
+                    )
                   }
                 })
-                iter_input += 1
+                out_ptr += 1
               }
             }
           })
         })
       }
     }
-
-    if (!included) task.excludeFromAll()
   }
 }

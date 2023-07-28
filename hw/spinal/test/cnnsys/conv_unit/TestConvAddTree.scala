@@ -10,7 +10,7 @@ import test.{TestTask, TestTaskGenerator}
 
 object TestConvAddTree extends TestTaskGenerator {
   private def testFor(bw: Int, length: Int, dist: Int, extend: Boolean, included: Boolean = true): Unit = {
-    val task = new TestTask[ConvAddTree] {
+    new TestTask[ConvAddTree](included) {
       override def construct(): ConvAddTree =
         ConvAddTree(
           input_bit_width = bw,
@@ -92,8 +92,6 @@ object TestConvAddTree extends TestTaskGenerator {
           )
       }
     }
-
-    if (!included) task.excludeFromAll()
   }
 
   override def prepare(included: Boolean): Unit = {

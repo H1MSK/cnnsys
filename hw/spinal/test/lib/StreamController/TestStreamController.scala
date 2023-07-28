@@ -10,7 +10,7 @@ import scala.util.Random
 
 object TestStreamController extends TestTaskGenerator {
   override def prepare(included: Boolean): Unit = {
-    var task = new TestTask[StreamController] {
+    new TestTask[StreamController](included) {
       override def construct(): StreamController = {
         val dut = StreamController(1)
         dut.full_bit.simPublic()
@@ -131,10 +131,9 @@ object TestStreamController extends TestTaskGenerator {
         })
       }
     }
-    if (!included) task.excludeFromAll()
 
     for (depth <- 2 until 33) {
-      task = new TestTask[StreamController] {
+      new TestTask[StreamController](included) {
         private var full_bits = mutable.ListBuffer[Boolean]().appendedAll(Array.fill(depth)(false))
         override def construct(): StreamController = StreamController(depth)
         override def doSim(compiled: SimCompiled[StreamController]): Unit = {
@@ -198,7 +197,6 @@ object TestStreamController extends TestTaskGenerator {
           })
         }
       }
-      if (!included) task.excludeFromAll()
     }
   }
 }

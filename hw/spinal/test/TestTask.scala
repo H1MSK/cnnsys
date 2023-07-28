@@ -7,7 +7,7 @@ import spinal.core.sim._
 import scala.collection.mutable
 import scala.util.Random
 
-abstract class TestTask[T <: Component] extends TestTaskBase {
+abstract class TestTask[T <: Component](included: Boolean) extends TestTaskBase {
   def construct(): T
 
   def doSim(compiled: SimCompiled[T]): Unit
@@ -37,7 +37,8 @@ abstract class TestTask[T <: Component] extends TestTaskBase {
 
   final def excludeFromAll(): Unit = TestTask.tasks -= this
 
-  TestTask.tasks += this
+  if (included)
+    TestTask.tasks += this
 }
 
 object TestTask {
