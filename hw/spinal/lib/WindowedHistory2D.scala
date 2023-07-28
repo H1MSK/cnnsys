@@ -31,42 +31,28 @@ case class WindowedHistory2D[T <: Data](
 
   private var previous_shift_payload = shift_in.payload
 
-  private var lines = mutable.ArrayBuffer[WindowedHistory[T]]()
-
-  if (line_count > 1) {
-    if (supported_input_widths.length > 1)
-      in(line_width_sel)
-
-    for (_ <- 1 until line_count) {
-      val line = WindowedHistory(
-        data_type = data_type,
-        supported_input_widths = supported_input_widths,
-        visible_input_count = visible_input_count,
-        has_shift_output = true
-      )
-      line.shift_in.valid := shift_in.valid
-      line.shift_in.payload := previous_shift_payload
-      if (supported_input_widths.length > 1)
-        line.line_width_sel := line_width_sel
-      previous_shift_payload = line.shift_out
-      lines += line
-    }
-  }
-
-  private val last_line = WindowedHistory(
+  private var lines = (0 until line_count).map(i => WindowedHistory(
     data_type = data_type,
     supported_input_widths = supported_input_widths,
     visible_input_count = visible_input_count,
-    has_shift_output = false
-  )
+    has_shift_output = i + 1 != line_count
+  ))
 
-  last_line.shift_in.valid := shift_in.valid
-  last_line.shift_in.payload := previous_shift_payload
-  lines += last_line
+  if (line_width_sel != null) {
+    in(line_width_sel)
+  }
+
+  lines.foreach(line => {
+    line.shift_in.valid := shift_in.valid
+    line.shift_in.payload := previous_shift_payload
+    if (line.line_width_sel != null)
+      line.line_width_sel := line_width_sel
+    previous_shift_payload = line.shift_out
+  })
 
   lines.indices.foreach(i => lines(i).setName("line_" + i))
 
-  /** Windowed data, in **row-major** order
+  /** Windowed data, **reversed**, in **row-major** order
     */
   val window = out Vec (data_type(), line_count * visible_input_count)
   window.zip(lines.flatMap(_.exports)).foreach(t => t._1 := t._2)

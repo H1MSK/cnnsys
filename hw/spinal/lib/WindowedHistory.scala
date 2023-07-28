@@ -30,6 +30,9 @@ case class WindowedHistory[T <: Data](
   )
   history.indices.foreach(i => history(i).setName("history_" + i))
 
+  /**
+   * The **last** input is at exports.head
+   */
   val exports = Vec(history.slice(0, visible_input_count))
   out(exports)
 
