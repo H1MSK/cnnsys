@@ -11,7 +11,7 @@ import scala.util.Random
 object TestWindowedHistory2D extends TestTaskGenerator {
   override def prepare(included: Boolean): Unit = {
     for (line_count <- Array(1, 3))
-      for (supported_input_widths <- Array(Array(6), Array(3, 6, 9, 12)))
+      for (supported_input_widths <- Array(Array(6), Array(6, 9, 12), Array(3, 6, 9, 12)))
         for (visible_input_count <- Array(1, 3)) {
 
           new TestTask[WindowedHistory2D[SInt]](included) {
@@ -29,7 +29,11 @@ object TestWindowedHistory2D extends TestTaskGenerator {
                 dut.clockDomain.forkStimulus(period = 10)
                 dut.clockDomain.assertReset()
 
-                Random.shuffle(supported_input_widths.indices.toList).foreach(sel => {
+                dut.shift_in.valid #= false
+
+                Random
+                  .shuffle(supported_input_widths.indices.toList)
+                  .foreach(sel => {
                     val current_width = supported_input_widths(sel)
                     if (supported_input_widths.length > 1 && line_count > 1)
                       dut.line_width_sel #= sel
@@ -40,7 +44,8 @@ object TestWindowedHistory2D extends TestTaskGenerator {
                       } catch {
                         case e: NullPointerException => excepted = true
                       }
-                      if (!excepted)
+                      if (!excepted) {
+                        sleep(1)
                         simFailure(
                           "Unnecessary port generated: " +
                             "Port line_width_sel is generated when condition \"supported_input_widths.length > 1 && line_count > 1\" doesn't match" +
@@ -49,33 +54,44 @@ object TestWindowedHistory2D extends TestTaskGenerator {
                             s"  supported_input_widths = ${supported_input_widths.mkString(", ")},\n" +
                             s"  visible_input_count = $visible_input_count\n"
                         )
+                      }
                     }
 
                     val data = TestTask.randomSInt(8 bits, (line_count + 2) * current_width)
-                    for (l <- 0 until (line_count + 2)) {
-                      for (c <- 0 until current_width) {
-                        val v = data(l * current_width + c)
-                        dut.shift_in.payload #= v
-                        dut.shift_in.valid #= true
-                        dut.clockDomain.waitActiveEdge()
+                    val data_lines = data.sliding(line_count, line_count)
+
+                    var ptr = 0
+
+                    while (ptr < data.length) {
+                      sleep(1)
+                      val v = data(ptr)
+                      dut.shift_in.payload #= v
+                      val valid = Random.nextBoolean()
+                      dut.shift_in.valid #= valid
+
+                      dut.clockDomain.waitActiveEdge()
+                      sleep(1)
+
+                      if (valid) {
+                        val l = ptr / current_width
+                        val c = ptr % current_width
+                        ptr += 1
                         if (l >= line_count - 1 && c >= visible_input_count - 1) {
-                          var i = 0
-                          for (check_l <- (l - line_count + 1 to l))
-                            for (check_c <- (c - visible_input_count + 1 to c)) {
-                              val d = data(check_l * current_width + check_c)
-                              val out = dut.window(i).toInt
-                              if (out != d) {
-                                simFailure(
-                                  s"Window data doesn't match, want $d, but get $out\n" +
-                                    s"Checking pos (r=${check_l}, c=${check_c}), current input at (r=$l, c=$c)\n" +
-                                    s"Config:\n" +
-                                    s"  line_count = $line_count,\n" +
-                                    s"  supported_input_widths = ${supported_input_widths.mkString(", ")},\n" +
-                                    s"  visible_input_count = $visible_input_count\n" +
-                                    s"Data:\n${data.sliding(current_width).map(_.mkString(", ")).mkString("\n")}\n"
-                                )
-                              }
-                            }
+                          val out = dut.window.map(_.toInt).toArray
+                          val std = (l - line_count + 1 to l).flatMap(cl => {
+                            (c - visible_input_count + 1 to c).map(cc => data(cl * current_width + cc))
+                          }).reverse.toArray
+                          if (!(out sameElements std)) {
+                            simFailure(
+                              s"Window data doesn't match, want ${std.mkString("(", ", ", ")")}, but get ${out.mkString("(", ", ", ")")}\n" +
+                                s"Config:\n" +
+                                s"  line_count = $line_count,\n" +
+                                s"  supported_input_widths = ${supported_input_widths.mkString(", ")},\n" +
+                                s"  current_input_width = $current_width,\n" +
+                                s"  visible_input_count = $visible_input_count\n" +
+                                s"Data:\n${data.sliding(current_width, current_width).map(_.mkString(", ")).mkString("\n")}\n"
+                            )
+                          }
                         }
                       }
                     }
