@@ -27,17 +27,17 @@ case class ConvUnit(config: ConvUnitConfig) extends Component {
 
   val line_width_sel = in Bits (log2Up(config.supportedInputWidths.length) bits)
 
-  val din_stream = slave(genStreamPort(config.unitInDataBitWidth * config.coreInChannelCount bits, useLast = true))
-  val kernel_data_stream = slave(genStreamPort(config.unitKernelDataBitWidth * config.coreInChannelCount bits))
-  val requantizer_param_stream = slave(genStreamPort(RequantizerParamBundle(config.requantizer_config).getBitsWidth bits))
-  val bias_data = slave(genStreamPort(config.biasDataBitWidth * config.coreOutChannelCount bits))
-  val dout = master(genStreamPort(config.coreOutDataBitWidth * config.coreOutChannelCount bits, useLast = true))
+  val din_stream = slave(genStreamPort(config.unitInDataBitWidth * config.coreInChannelCount * config.coreCount bits, useLast = true))
+  val kernel_data_stream = slave(genStreamPort(config.coreKernelDataBitWidth * config.coreInChannelCount * config.coreCount bits))
+  val requantizer_param_stream = slave(genStreamPort(RequantizerParamBundle(config.requantizer_config).getBitsWidth * config.coreCount bits))
+  val bias_data = slave(genStreamPort(config.biasDataBitWidth * config.coreOutChannelCount * config.coreCount bits))
+  val dout = master(genStreamPort(config.coreOutDataBitWidth * config.coreOutChannelCount * config.coreCount bits, useLast = true))
 
 
   val core = ConvCore(config)
   val recorder = FragmentRecorder(
-    Vec(SInt(config.unitInDataBitWidth bits), config.coreInChannelCount),
-    Vec(SInt(config.coreOutDataBitWidth bits), config.coreOutChannelCount)
+    Vec(SInt(config.unitInDataBitWidth bits), config.coreInChannelCount * config.coreCount),
+    Vec(SInt(config.unitOutDataBitWidth bits), config.coreOutChannelCount * config.coreCount)
   )
 
   recorder.din_frags.arbitrationFrom(din_stream)

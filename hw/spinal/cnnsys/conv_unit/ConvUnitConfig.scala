@@ -9,9 +9,13 @@ import scala.language.postfixOps
 
 case class ConvUnitConfig() extends UnitConfig {
   // TODO: Annotation
-  var coreCount: Int = 4
+  var coreCount: Int = 1
+
   var coreInChannelCount: Int = 8
   var coreOutChannelCount: Int = 8
+
+  def unitInChannelCount: Int = coreInChannelCount * coreCount
+  def unitOutChannelCount: Int = coreOutChannelCount * coreCount
 
   // TODO: Annotation
   var kernelSize: Int = 3
@@ -19,13 +23,17 @@ case class ConvUnitConfig() extends UnitConfig {
 
   // Element bit width (Specific data type is not cared here)
   // 元素位宽（此处不关心具体数据类型）
-  var unitInDataBitWidth: Int = 8
-  var unitKernelDataBitWidth: Int = 8
+  var coreInDataBitWidth: Int = 8
+  var coreKernelDataBitWidth: Int = 8
   var coreOutDataBitWidth: Int = 8
 
-  def productDataBitWidth: Int = unitInDataBitWidth + unitKernelDataBitWidth  // 16
+  def unitInDataBitWidth: Int = coreInDataBitWidth
+  def unitKernelDataBitWidth: Int = coreKernelDataBitWidth
+  def unitOutDataBitWidth: Int = coreOutDataBitWidth
 
-  def convAddTreeInputDataBitWidth: Int = productDataBitWidth
+  def coreProductDataBitWidth: Int = coreInDataBitWidth + coreKernelDataBitWidth  // 16
+
+  def convAddTreeInputDataBitWidth: Int = coreProductDataBitWidth
   def addTreeRegisterDistance: Int = 2
 
   var requantizerScalerDataBitWidth: Int = 32
@@ -40,13 +48,11 @@ case class ConvUnitConfig() extends UnitConfig {
     useOffset = false
   )
 
-  def biasDataBitWidth: Int = productDataBitWidth
+  def biasDataBitWidth: Int = coreProductDataBitWidth
 
   def coreAdderTreeOutputDataBitWidth: Int = requantizerOutDataBitWidth + log2Up(coreInChannelCount)
 
-  def unitOutDataBitWidth: Int = coreOutDataBitWidth
-
-  def unitInStreamConfig = Axi4StreamConfig(
+  def coreInStreamConfig = Axi4StreamConfig(
     dataWidth = unitInDataBitWidth * coreInChannelCount * coreCount,
     idWidth = -1,
     destWidth = -1,
@@ -58,7 +64,7 @@ case class ConvUnitConfig() extends UnitConfig {
     useDest = false,
     useUser = false
   )
-  val unitOutStreamConfig = unitInStreamConfig.copy(
+  val unitOutStreamConfig = coreInStreamConfig.copy(
     dataWidth = 1024 / 8,
     destWidth = 2,
     useDest = true,
@@ -69,7 +75,7 @@ case class ConvUnitConfig() extends UnitConfig {
   // Dilation and step can be scheduled in software
 
 
-  assert(unitInDataBitWidth * coreInChannelCount * coreCount % 8 == 0)
+  assert(coreInDataBitWidth * coreInChannelCount * coreCount % 8 == 0)
   if (supportedInputWidths(0) < kernelSize)
     SpinalError("Input width should not be less than kernel size")
   (1 until supportedInputWidths.length).foreach(i => {

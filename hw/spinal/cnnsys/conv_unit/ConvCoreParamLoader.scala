@@ -8,16 +8,16 @@ import spinal.lib.fsm.{EntryPoint, State, StateMachine}
 import scala.language.postfixOps
 
 case class ConvCoreParamLoader(config: ConvUnitConfig) extends Component {
-  val din = slave(Axi4Stream(config.unitInStreamConfig))
+  val din = slave(Axi4Stream(config.coreInStreamConfig))
 
-  val kernel_data = master Flow Vec(SInt(config.unitKernelDataBitWidth bits), config.coreInChannelCount)
+  val kernel_data = master Flow Vec(SInt(config.coreKernelDataBitWidth bits), config.coreInChannelCount)
   val bias_data = master Flow Vec(SInt(config.coreOutDataBitWidth bits), config.coreOutChannelCount)
   val quant_scaler_data = master Flow new Bundle {
     val scaler = SInt(config.requantizerScalerDataBitWidth bits)
     val shifter = SInt(config.requantizerShifterDataBitWidth bits)
   }
 
-  private val input_length = config.unitInStreamConfig.dataWidth * 8
+  private val input_length = config.coreInStreamConfig.dataWidth * 8
   val reg_store = Reg(Bits(2 * input_length bits)) init 0
   val reg_count = Reg(UInt(log2Up(input_length * 2) bits)) init 0
   val reg_current_out_length = Reg(UInt(log2Up(input_length * 2) bits)) init 0

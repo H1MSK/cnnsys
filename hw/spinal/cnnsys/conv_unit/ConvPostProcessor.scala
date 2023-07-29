@@ -12,8 +12,8 @@ case class ConvPostProcessor(config: ConvUnitConfig) extends Component{
   val do_mul_sigmoid = in Bool()
   val din = slave Stream Vec(SInt(config.coreOutDataBitWidth bits), config.coreOutChannelCount)
   val dout = master Stream new Bundle {
-    val data = Bits(config.unitOutDataBitWidth * config.coreOutChannelCount * config.coreCount bits)
-    val keep = Bits(config.unitOutDataBitWidth * config.coreOutChannelCount * config.coreCount / 8 bits)
+    val data = Bits(config.coreOutDataBitWidth * config.coreOutChannelCount * config.coreCount bits)
+    val keep = Bits(config.coreOutDataBitWidth * config.coreOutChannelCount * config.coreCount / 8 bits)
   }
 
   private val pairController = StreamController(1)

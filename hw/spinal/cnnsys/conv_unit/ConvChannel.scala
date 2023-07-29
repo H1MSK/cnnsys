@@ -37,16 +37,16 @@ import scala.language.postfixOps
   */
 case class ConvChannel(config: ConvUnitConfig) extends Component {
   val line_width_sel = in Bits (log2Up(config.supportedInputWidths.length) bits)
-  val din = slave Stream SInt(config.unitInDataBitWidth bits)
+  val din = slave Stream SInt(config.coreInDataBitWidth bits)
   val dout = master Stream Vec(
-    Vec(SInt(config.productDataBitWidth bits), config.kernelSize * config.kernelSize),
+    Vec(SInt(config.coreProductDataBitWidth bits), config.kernelSize * config.kernelSize),
     config.coreOutChannelCount
   )
 
-  val kernel_din = slave Flow SInt(config.unitKernelDataBitWidth bits)
+  val kernel_din = slave Flow SInt(config.coreKernelDataBitWidth bits)
 
   val kernel = Seq.fill(config.coreOutChannelCount)(
-    ConvKernelMem(config.kernelSize * config.kernelSize, config.unitKernelDataBitWidth)
+    ConvKernelMem(config.kernelSize * config.kernelSize, config.coreKernelDataBitWidth)
   )
   var last_din = kernel_din
   kernel.reverse.foreach(k => {
@@ -59,7 +59,7 @@ case class ConvChannel(config: ConvUnitConfig) extends Component {
 
   val inputWindow = WindowedHistory2D(
     line_count = config.kernelSize,
-    data_type = SInt(config.unitInDataBitWidth bits),
+    data_type = SInt(config.coreInDataBitWidth bits),
     supported_input_widths = config.supportedInputWidths,
     visible_input_count = config.kernelSize
   )

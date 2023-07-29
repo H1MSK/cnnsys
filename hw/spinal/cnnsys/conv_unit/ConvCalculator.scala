@@ -7,14 +7,14 @@ import spinal.lib._
 import scala.language.postfixOps
 
 case class ConvCalculator(config: ConvUnitConfig) extends Component {
-  val din = slave Stream Vec(SInt(config.unitInDataBitWidth bits), config.kernelSize * config.kernelSize)
+  val din = slave Stream Vec(SInt(config.coreInDataBitWidth bits), config.kernelSize * config.kernelSize)
 
   val kernel_in = in Vec(
-    SInt(config.unitKernelDataBitWidth bits),
+    SInt(config.coreKernelDataBitWidth bits),
     config.kernelSize * config.kernelSize
   )
 
-  val dout = master Stream Vec(SInt(config.productDataBitWidth bits), config.kernelSize * config.kernelSize)
+  val dout = master Stream Vec(SInt(config.coreProductDataBitWidth bits), config.kernelSize * config.kernelSize)
 
   val product_controller = StreamController(1)
 

@@ -8,8 +8,8 @@ import scala.language.postfixOps
 
 case class ConvCore(config: ConvUnitConfig) extends Component {
   val line_width_sel = in Bits (log2Up(config.supportedInputWidths.length) bits)
-  val din = slave Stream Vec(SInt(config.unitInDataBitWidth bits), config.coreInChannelCount)
-  val kernel_data = slave Flow Vec(SInt(config.unitKernelDataBitWidth bits), config.coreInChannelCount)
+  val din = slave Stream Vec(SInt(config.coreInDataBitWidth bits), config.coreInChannelCount)
+  val kernel_data = slave Flow Vec(SInt(config.coreKernelDataBitWidth bits), config.coreInChannelCount)
   val requantizer_param_in = slave Flow RequantizerParamBundle(config.requantizer_config)
   val bias_data = slave Flow Vec(SInt(config.biasDataBitWidth bits), config.coreOutChannelCount)
   val dout = master Stream Vec(SInt(config.coreOutDataBitWidth bits), config.coreOutChannelCount)
