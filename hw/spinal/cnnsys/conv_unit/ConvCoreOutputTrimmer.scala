@@ -34,7 +34,6 @@ case class ConvCoreOutputTrimmer(config: ConvUnitConfig) extends Component {
     val zero = counter.getZero.setName("zero")
 
     val din_fired = din.fire.setName("din_fired")
-    val dout_fired = dout.fire.setName("dout_fired")
 
     din.ready := False
     dout.valid := False
@@ -53,7 +52,7 @@ case class ConvCoreOutputTrimmer(config: ConvUnitConfig) extends Component {
         .whenIsActive {
           din.ready := True
           dout.valid := False
-          when(din.fire) {
+          when(din_fired) {
             when(din.last) {
               counter := zero
             }.elsewhen(counterPlusOne === width * (config.kernelSize - 1)) {
@@ -71,7 +70,7 @@ case class ConvCoreOutputTrimmer(config: ConvUnitConfig) extends Component {
         .whenIsActive {
           din.ready := lineInitializing || dout.ready
           dout.valid := !lineInitializing && din.valid
-          when(din.fire) {
+          when(din_fired) {
             when(din.last) {
               goto(starting)
             }.elsewhen(counterPlusOne === width) {
