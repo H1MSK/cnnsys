@@ -17,22 +17,16 @@ case class Requantizer(
 
   private var last_payload = din.payload
 
-  val stage_count = (if (config.scale_bitwidth > 0) 1 else 0) +
+  val stage_count = (if (config.useScale) 1 else 0) +
     (if (config.useOffset) 1 else 0) +
     (if (config.useRightShift) 1 else 0) +
-    (if (
-       config.din_bitwidth +
-         Math.max(0, config.scale_bitwidth) +
-         (if (config.useOffset && !config.useOffsetSaturation) 1 else 0) -
-         config.dout_bitwidth != 0
-     ) 1
-     else 0)
+    (if (config.shift_stage_output_bitwidth != config.dout_bitwidth) 1 else 0)
 
   val controller = StreamController(stage_count)
   controller << din
   var current_stage = 0
 
-  if (config.scale_bitwidth > 0) {
+  if (config.useScale) {
     val scaled = Vec(last_payload.map(_ * param.scale))
     last_payload = RegNextWhen(scaled, controller.en(current_stage), init = scaled.getZero)
     current_stage += 1
@@ -58,9 +52,12 @@ case class Requantizer(
     last_payload.setName("shift_stage")
   }
 
-  if (last_payload.head.getBitsWidth - config.dout_bitwidth != 0) {
+  assert(last_payload.head.getBitsWidth == config.shift_stage_output_bitwidth)
+
+  val delta = last_payload.head.getBitsWidth - config.dout_bitwidth
+  if (delta != 0) {
     val rounded =
-      (if (last_payload.head.getBitsWidth - config.dout_bitwidth > 0)
+      (if (delta > 0)
          Vec(
            last_payload.map(_.roundToInf(last_payload.head.getBitsWidth - config.dout_bitwidth bits, align = false).sat(1))
          )
