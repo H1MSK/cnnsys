@@ -20,6 +20,7 @@ case class ConvUnitConfig() extends UnitConfig {
   // TODO: Annotation
   var kernelSize: Int = 3
   var supportedInputWidths: Array[Int] = Array(3, 11, 22)
+  var maxPaddingSize: Int = 1
 
   // Element bit width (Specific data type is not cared here)
   // 元素位宽（此处不关心具体数据类型）

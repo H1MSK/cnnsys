@@ -35,17 +35,26 @@ case class ConvUnit(config: ConvUnitConfig) extends Component {
 
 
   val core = ConvCore(config)
+  val padder = Input2DPadder(
+    Vec(SInt(config.unitInDataBitWidth bits), config.coreInChannelCount * config.coreCount),
+    config.supportedInputWidths,
+    config.maxPaddingSize
+  )
   val recorder = FragmentRecorder(
     Vec(SInt(config.unitInDataBitWidth bits), config.coreInChannelCount * config.coreCount),
     Vec(SInt(config.unitOutDataBitWidth bits), config.coreOutChannelCount * config.coreCount)
   )
 
-  recorder.din_frags.arbitrationFrom(din_stream)
-  recorder.din_frags.fragment.assignFromBits(din_stream.payload.data)
-  recorder.din_frags.last := din_stream.payload.last
+  padder.din.arbitrationFrom(din_stream)
+  padder.din.fragment.assignFromBits(din_stream.payload.data)
+  padder.din.last := din_stream.payload.last
+  padder.padding_size := padding_size
+  padder.padding_data := Vec(padding_data, config.coreInChannelCount * config.coreCount)
+  padder.line_width_sel := line_width_sel
 
-  core.din.arbitrationFrom(recorder.din_stream)
-  core.din.payload := recorder.din_stream.payload
+  recorder.din_frags << padder.dout
+
+  connect(recorder.din_stream, core.din)
 
   recorder.dout_stream.arbitrationFrom(core.dout)
   recorder.dout_stream.payload.assignFromBits(core.dout.payload.asBits)
