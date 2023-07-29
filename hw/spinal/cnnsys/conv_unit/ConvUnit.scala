@@ -1,6 +1,6 @@
 package cnnsys.conv_unit
 
-import lib.FragmentRecorder
+import lib.{FragmentRecorder, Input2DPadder}
 import lib.quantizer.RequantizerParamBundle
 import lib.utils.XilinxBusTagger
 import spinal.core._
@@ -33,6 +33,8 @@ case class ConvUnit(config: ConvUnitConfig) extends Component {
   val bias_data = slave(genStreamPort(config.biasDataBitWidth * config.coreOutChannelCount * config.coreCount bits))
   val dout = master(genStreamPort(config.coreOutDataBitWidth * config.coreOutChannelCount * config.coreCount bits, useLast = true))
 
+  val padding_data = in SInt (config.coreInDataBitWidth bits)
+  val padding_size = in UInt (log2Up(config.maxPaddingSize + 1) bits)
 
   val core = ConvCore(config)
   val padder = Input2DPadder(
