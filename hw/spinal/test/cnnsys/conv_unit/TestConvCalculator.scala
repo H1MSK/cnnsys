@@ -30,12 +30,12 @@ object TestConvCalculator extends TestTaskGenerator {
 
           (0 until 128).foreach(iter_kernel => {
             val kernel = Array.fill(config.kernelSize * config.kernelSize)(
-              TestTask.randomSInt(config.unitKernelDataBitWidth bits)
+              TestTask.randomSInt(config.coreKernelDataBitWidth bits)
             )
             dut.kernel_in.zip(kernel).foreach(t => t._1 #= t._2)
 
             val inputs = Array.fill(128)(
-              TestTask.randomSInt(config.unitInDataBitWidth bits, length = config.kernelSize * config.kernelSize)
+              TestTask.randomSInt(config.coreInDataBitWidth bits, length = config.kernelSize * config.kernelSize)
             )
 
             val products = inputs.map(_.zip(kernel).map(t => t._1 * t._2))

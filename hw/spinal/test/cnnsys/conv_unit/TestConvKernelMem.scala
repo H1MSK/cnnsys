@@ -13,7 +13,7 @@ object TestConvKernelMem extends TestTaskGenerator {
     val config = ConvUnitConfig.default
     new TestTask[ConvKernelMem](included) {
       override def construct(): ConvKernelMem =
-        ConvKernelMem(config.kernelSize * config.kernelSize, config.unitKernelDataBitWidth)
+        ConvKernelMem(config.kernelSize * config.kernelSize, config.coreKernelDataBitWidth)
 
       override def doSim(compiled: SimCompiled[ConvKernelMem]): Unit = {
         compiled.doSim(dut => {
@@ -21,7 +21,7 @@ object TestConvKernelMem extends TestTaskGenerator {
           dut.clockDomain.assertReset()
           (0 until 1024).foreach(_ => {
             val kernel =
-              TestTask.randomSInt(config.unitKernelDataBitWidth bits, length = config.kernelSize * config.kernelSize)
+              TestTask.randomSInt(config.coreKernelDataBitWidth bits, length = config.kernelSize * config.kernelSize)
 
             var last_kernel: Array[Int] = null
             val out_data = mutable.Queue[Int]()
