@@ -8,8 +8,17 @@ import spinal.core._
 import spinal.lib._
 import test.{TestTask, TestTaskGenerator}
 
+import scala.language.postfixOps
+
 object TestConvAddTree extends TestTaskGenerator {
-  private def testFor(bw: Int, length: Int, dist: Int, extend: Boolean, included: Boolean = true): Unit = {
+  private def testFor(
+      bw: Int,
+      length: Int,
+      dist: Int,
+      extend: Boolean,
+      saturate: Boolean,
+      included: Boolean = true
+  ): Unit = {
     new TestTask[ConvAddTree](included) {
       override def construct(): ConvAddTree =
         ConvAddTree(
@@ -17,6 +26,7 @@ object TestConvAddTree extends TestTaskGenerator {
           length = length,
           register_distance = dist,
           extend_bitwidth = extend,
+          saturate_output = saturate,
           use_bias = true
         )
 
@@ -47,17 +57,9 @@ object TestConvAddTree extends TestTaskGenerator {
             dut.clockDomain.waitActiveEdge()
 
             if (dut.din.ready.toBoolean && dut.din.valid.toBoolean) {
-              sums.enqueue(cur.reduce((a, b) => {
-                val sum = a + b
-                if (extend) sum
-                else if (sum >= (1 << (bw - 1))) {
-                  sum - (1 << bw)
-                } else if (sum < -(1 << (bw - 1))) {
-                  sum + (1 << bw)
-                } else {
-                  sum
-                }
-              }))
+              sums.enqueue({
+                addUp(cur, extend, saturate, bw)
+              })
               inputs.enqueue(cur)
               cur = setInput(dut)
             }
@@ -94,11 +96,31 @@ object TestConvAddTree extends TestTaskGenerator {
     }
   }
 
+  def addUp(cur: Array[Int], extend: Boolean, saturate: Boolean, bw: Int) = {
+    val out = cur.reduce((a, b) => {
+      val sum = a + b
+      if (extend) sum
+      else if (sum >= (1 << (bw - 1))) {
+        sum - (1 << bw)
+      } else if (sum < -(1 << (bw - 1))) {
+        sum + (1 << bw)
+      } else {
+        sum
+      }
+    })
+    if (saturate && !TestTask.inRangeOfSInt(bw bits, out)) {
+      val topbit = 1 << (bw - 1)
+      if (out > 0) topbit - 1
+      else -topbit
+    } else out
+  }
+
   override def prepare(included: Boolean): Unit = {
     for (bw <- Array(4, 8, 12, 16)) {
       for (length <- Array(1, 2, 4, 6, 8, 16)) {
         for (dist <- 1 until 4) {
-          for (extend <- Array(false, true)) testFor(bw, length, dist, extend, included = included)
+          for (extend <- Array(false, true))
+            for (saturate <- Array(false, true)) testFor(bw, length, dist, extend, saturate, included = included)
         }
       }
     }
