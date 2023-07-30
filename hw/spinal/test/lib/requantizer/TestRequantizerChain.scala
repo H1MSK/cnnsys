@@ -15,10 +15,12 @@ object TestRequantizerChain extends TestTaskGenerator {
 
   def requantize(x: Int, param: RequantizerParamData, config: RequantizerConfig): Long = {
       var t = x * (if (config.useScale) param.scale else 1): Long
-      if (config.useOffset) t += param.offset
-      if (config.useOffsetSaturation && (t >> config.offset_stage_output_bitwidth) != (if (t >= 0) 0 else -1)) {
-        val max = 1 << config.offset_stage_output_bitwidth
-        t = if (t > 0) (max - 1) else -max
+      if (config.useOffset) {
+        t += param.offset
+        if (config.useOffsetSaturation && (t >> config.offset_stage_output_bitwidth) != (if (t >= 0) 0 else -1)) {
+          val max = 1 << config.offset_stage_output_bitwidth
+          t = if (t > 0) (max - 1) else -max
+        }
       }
       if (config.useRightShift) t >>= param.shift_count
 
