@@ -44,7 +44,7 @@ case class ConvUnitConfig() extends UnitConfig {
   var addTreeRegisterDistance: Int = 2
 
   def requantizerInDataBitWidth: Int = convAddTreeOutputDataBitWidth
-  var requantizerScalerDataBitWidth: Int = 64 - requantizerInDataBitWidth
+  var requantizerScalerDataBitWidth: Int = 32 - requantizerInDataBitWidth
   def requantizerOutDataBitWidth: Int = coreOutDataBitWidth
 
   def requantizer_config = RequantizerConfig(
