@@ -39,8 +39,8 @@ case class Input2DPadder[T <: Data](data_type: HardType[T], supported_input_widt
          U(supported_input_widths.last)).setName("width")
 
     val counter =
-      RegInit(U(0, (supported_input_widths.last + 2 * max_padding_size) * max_padding_size bits)).setName("counter")
-    val counterPlusOne = (counter + U(1)).setName("counterPlusOne")
+      RegInit(U(0, log2Up((supported_input_widths.last + 2 * max_padding_size - 1) * max_padding_size) bits)).setName("counter")
+    val counterMinusOne = (counter - U(1)).setName("counterMinusOne")
 
     val zero = counter.getZero.setName("zero")
 
@@ -54,9 +54,9 @@ case class Input2DPadder[T <: Data](data_type: HardType[T], supported_input_widt
 
     val padding_size_by_2 = (padding_size * 2).setName("padding_size_x2")
 
-    // comment on "- padding size":
-    // The top and bottom paddings will both output line *
-    val side_padding_count = ((width + 2 * padding_size) * padding_size - padding_size).setName("side_padding_size")
+    // comment on "- 1":
+    // 2 * padding_size will be output before each input line
+    val side_padding_count = ((width +^ ((padding_size << 1) - 1)) * padding_size).setName("side_padding_size")
 
     val finishing = RegInit(False).setName("finishing")
 
@@ -124,14 +124,15 @@ case class Input2DPadder[T <: Data](data_type: HardType[T], supported_input_widt
 
       starting_ending_padding
         .onEntry {
-          counter := zero
+          counter := side_padding_count.resized
+          assert(counter.getBitsWidth >= width.getBitsWidth)
         }
         .whenIsActive {
           din.ready := False
           dout.valid := True
 
           when(dout_fired) {
-            when(counterPlusOne >= side_padding_count) {
+            when(counterMinusOne === U(0)) {
               when(finishing) {
                 dout.last := True
                 goto(idle)
@@ -139,35 +140,37 @@ case class Input2DPadder[T <: Data](data_type: HardType[T], supported_input_widt
                 goto(running_padding)
               }
             }.otherwise {
-              counter := counterPlusOne
+              counter := counterMinusOne
             }
           }
         }
 
       running_padding
         .onEntry {
-          counter := zero
+          counter := padding_size_by_2.resized
+          assert(counter.getBitsWidth >= width.getBitsWidth)
         }
         .whenIsActive {
           din.ready := False
           dout.valid := True
 
           when(dout_fired) {
-            when(counterPlusOne >= padding_size_by_2) {
+            when(counterMinusOne === U(0)) {
               when(finishing) {
                 goto(starting_ending_padding)
               }.otherwise {
                 goto(running_data)
               }
             }.otherwise {
-              counter := counterPlusOne
+              counter := counterMinusOne
             }
           }
         }
 
       running_data
         .onEntry {
-          counter := 0
+          counter := width.resized
+          assert(counter.getBitsWidth >= width.getBitsWidth)
         }
         .whenIsActive {
           din.ready := dout.ready
@@ -184,14 +187,14 @@ case class Input2DPadder[T <: Data](data_type: HardType[T], supported_input_widt
               }.otherwise {
                 goto(running_padding)
               }
-            }.elsewhen(counterPlusOne >= width) {
+            }.elsewhen(counterMinusOne === U(0)) {
               when(padding_size === U(0)) {
                 counter := 0
               }.otherwise {
                 goto(running_padding)
               }
             }.otherwise {
-              counter := counterPlusOne
+              counter := counterMinusOne
             }
           }
         }
