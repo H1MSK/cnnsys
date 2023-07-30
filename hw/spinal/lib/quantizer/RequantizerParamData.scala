@@ -11,6 +11,8 @@ class RequantizerParamData {
   var offset: Long = 0
   var shift_count: Long = 0
 
+  override def toString: String = s"RequantData{ scale=$scale, offset=$offset, shift_count=$shift_count }"
+
   def simApplyToBundle(bundle: RequantizerParamBundle): Unit = {
     if (bundle.config.scale_bitwidth > 0) {
       assert(TestTask.inRangeOfSInt(bundle.scale.getBitsWidth bits, scale),
