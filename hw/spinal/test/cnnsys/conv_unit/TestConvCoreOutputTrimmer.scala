@@ -1,6 +1,6 @@
 package test.cnnsys.conv_unit
 
-import cnnsys.conv_unit.{ConvCoreOutputTrimmer, ConvUnitConfig}
+import cnnsys.conv_unit.{ConvUnitOutputTrimmer, ConvUnitConfig}
 import spinal.core._
 import spinal.core.sim._
 import test.{TestTask, TestTaskGenerator}
@@ -13,14 +13,14 @@ object TestConvCoreOutputTrimmer extends TestTaskGenerator {
     (1 until 4).foreach(kernel_size => {
       Array(Array(11), (0 until 4).map(kernel_size + _).toArray, ConvUnitConfig.default.supportedInputWidths).foreach(
         input_widths => {
-          new TestTask[ConvCoreOutputTrimmer](included) {
+          new TestTask[ConvUnitOutputTrimmer](included) {
             val config = new ConvUnitConfig() {
               kernelSize = kernel_size
               supportedInputWidths = input_widths
             }
-            override def construct(): ConvCoreOutputTrimmer = ConvCoreOutputTrimmer(config)
+            override def construct(): ConvUnitOutputTrimmer = ConvUnitOutputTrimmer(config)
 
-            override def doSim(compiled: SimCompiled[ConvCoreOutputTrimmer]): Unit = {
+            override def doSim(compiled: SimCompiled[ConvUnitOutputTrimmer]): Unit = {
               compiled.doSim(dut => {
                 dut.clockDomain.forkStimulus(10)
                 dut.clockDomain.assertReset()
