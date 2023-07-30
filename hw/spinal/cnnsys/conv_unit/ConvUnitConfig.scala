@@ -38,7 +38,6 @@ case class ConvUnitConfig() extends UnitConfig {
   def addTreeRegisterDistance: Int = 2
 
   var requantizerScalerDataBitWidth: Int = 32
-  var requantizerShifterDataBitWidth: Int = 8
   var requantizerInDataBitWidth: Int = 32
   def requantizerOutDataBitWidth: Int = coreOutDataBitWidth
 
@@ -48,6 +47,7 @@ case class ConvUnitConfig() extends UnitConfig {
     requantizerScalerDataBitWidth,
     useOffset = false
   )
+  def requantizerShifterDataBitWidth: Int = requantizer_config.shift_bitwidth
 
   def biasDataBitWidth: Int = coreProductDataBitWidth
 
