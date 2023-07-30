@@ -57,8 +57,6 @@ case class ConvUnitConfig() extends UnitConfig {
 
   def biasDataBitWidth: Int = coreProductDataBitWidth
 
-  def coreAdderTreeOutputDataBitWidth: Int = requantizerOutDataBitWidth + log2Up(coreInChannelCount)
-
   def coreInStreamConfig = Axi4StreamConfig(
     dataWidth = unitInDataBitWidth * coreInChannelCount * coreCount,
     idWidth = -1,
@@ -80,7 +78,6 @@ case class ConvUnitConfig() extends UnitConfig {
   )
 
   // Dilation and step can be scheduled in software
-
 
   assert(coreInDataBitWidth * coreInChannelCount * coreCount % 8 == 0)
   if (supportedInputWidths(0) < kernelSize)
