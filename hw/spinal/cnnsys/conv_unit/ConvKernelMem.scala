@@ -9,7 +9,12 @@ case class ConvKernelMem(mem_size: Int, data_width: Int) extends Component {
   val din = slave Flow SInt(data_width bits)
   val dout = master Flow SInt(data_width bits)
 
-  val regs: Vec[SInt] = Vec(History(RegNextWhen(din.payload, din.valid, init = din.payload.getZero), mem_size, din.valid, din.payload.getZero).reverse)
+  /**
+   * History of din,
+   * If din is forwardly inputted,
+   * regs will be **reversed**
+    */
+  val regs: Vec[SInt] = History(RegNextWhen(din.payload, din.valid, init = din.payload.getZero), mem_size, din.valid, din.payload.getZero)
   regs.indices.foreach(i => {
     val r = regs(i)
     out(r)
@@ -17,5 +22,5 @@ case class ConvKernelMem(mem_size: Int, data_width: Int) extends Component {
   })
 
   dout.valid := din.valid
-  dout.payload := regs.head
+  dout.payload := regs.last
 }

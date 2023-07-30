@@ -34,17 +34,19 @@ object TestConvKernelMem extends TestTaskGenerator {
               sleep(1)
             })
 
-            dut.regs.indices.foreach(i => {
-              if (dut.regs(i).toInt != kernel(i)) {
-                simFailure(s"Kernel #${i} is ${dut.regs(i).toInt}, but want ${kernel(i)}\n" +
+            val stored = dut.regs.map(_.toInt).reverse
+
+            stored.indices.foreach(i => {
+              if (stored(i) != kernel(i)) {
+                simFailure(s"Kernel #${i} is ${stored(i)}, but want ${kernel(i)}\n" +
                   s"kernel = ${kernel.mkString(",")}\n" +
-                  s"regs = ${dut.regs.map(_.toInt).mkString(",")}")
+                  s"regs = ${stored.mkString(",")}")
               }
             })
 
             if (last_kernel != null) {
               last_kernel.indices.foreach(i => {
-                val out = out_data(i)
+                val out = out_data(config.kernelSize * config.kernelSize - 1 - i)
                 if (last_kernel(i) != out) {
                   simFailure(s"Kernel out #${i} is ${last_kernel(i)}, but want ${out}\n" +
                     s"generated = ${last_kernel.mkString(",")}\n" +

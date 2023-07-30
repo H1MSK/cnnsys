@@ -8,6 +8,7 @@ import spinal.lib.bus.amba4.axis.Axi4StreamConfig
 import scala.language.postfixOps
 
 case class ConvUnitConfig() extends UnitConfig {
+  var convFlipKernel: Boolean = false
   // TODO: Annotation
   var coreCount: Int = 1
 

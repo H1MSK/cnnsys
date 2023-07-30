@@ -20,7 +20,7 @@ case class ConvCalculator(config: ConvUnitConfig) extends Component {
 
   product_controller << din
 
-  val products = Vec(din.payload.zip(kernel_in).map(t => t._1 * t._2))
+  val products = Vec(din.payload.zip(if(config.convFlipKernel) kernel_in.reverse else kernel_in).map(t => t._1 * t._2))
   val reg_products = RegNextWhen(products, product_controller.en(0), init = products.getZero)
 
   product_controller >> dout

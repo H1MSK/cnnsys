@@ -38,7 +38,7 @@ object TestConvCalculator extends TestTaskGenerator {
               TestTask.randomSInt(config.coreInDataBitWidth bits, length = config.kernelSize * config.kernelSize)
             )
 
-            val products = inputs.map(_.zip(kernel).map(t => t._1 * t._2))
+            val products = inputs.map(_.zip(if (config.convFlipKernel) kernel.reverse else kernel).map(t => t._1 * t._2))
 
             var in_ptr = 0
             var out_ptr = 0
