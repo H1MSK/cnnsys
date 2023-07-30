@@ -64,7 +64,7 @@ object TestRequantizerChain extends TestTaskGenerator {
                 offset = if (use_offset) TestTask.randomSIntAsLong((if (use_scale) 32 else 16) bits) else 0
                 shift_count =
                   if (use_right_shift)
-                    Random.nextInt(1 + (if (use_scale) 32 else 16) + (if (use_offset_saturation) 0 else 1))
+                    Random.nextInt(16)
                   else 0
               }
             )
