@@ -11,6 +11,7 @@ case class ConvAddTree(
     length: Int,
     register_distance: Int,
     extend_bitwidth: Boolean,
+    saturate_output: Boolean,
     use_bias: Boolean
 ) extends Component {
   val din = slave Stream Vec(SInt(input_bit_width bits), length)
@@ -35,5 +36,11 @@ case class ConvAddTree(
   tree.controller << din
   tree.controller >> dout
 
-  dout.payload := tree.result
+  if (saturate_output) {
+    val saturated = tree.result.sat(tree.result.getBitsWidth - input_bit_width).setName("saturated")
+    dout.payload := saturated
+  } else {
+    dout.payload := tree.result
+  }
+
 }
