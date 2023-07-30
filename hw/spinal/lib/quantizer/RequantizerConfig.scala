@@ -30,7 +30,7 @@ case class RequantizerConfig(
 
   def shift_bitwidth: Int =
     if (useRightShift)
-      log2Up(offset_stage_output_bitwidth + 1)
+      log2Up(Math.min(offset_stage_output_bitwidth, dout_bitwidth))
     else 0
 
   def shift_stage_output_bitwidth: Int = offset_stage_output_bitwidth
