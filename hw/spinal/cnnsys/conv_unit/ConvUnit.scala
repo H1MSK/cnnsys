@@ -25,16 +25,30 @@ case class ConvUnit(config: ConvUnitConfig) extends Component {
     to.payload.assignFromBits(from.payload.asBits)
   }
 
-  val line_width_sel = in Bits (log2Up(config.supportedInputWidths.length) bits)
+  val line_width_sel =
+    (config.supportedInputWidths.length > 1) generate Bits(log2Up(config.supportedInputWidths.length) bits)
+  if (config.supportedInputWidths.length > 1) in(line_width_sel)
 
-  val din_stream = slave(genStreamPort(config.unitInDataBitWidth * config.coreInChannelCount * config.coreCount bits, useLast = true))
-  val kernel_data_stream = slave(genStreamPort(config.unitKernelDataBitWidth * config.coreInChannelCount * config.coreCount bits))
-  val requantizer_param_stream = slave(genStreamPort(RequantizerParamBundle(config.requantizer_config).getBitsWidth * config.coreCount bits))
+  val din_stream = slave(
+    genStreamPort(config.unitInDataBitWidth * config.coreInChannelCount * config.coreCount bits, useLast = true)
+  )
+  val kernel_data_stream = slave(
+    genStreamPort(config.unitKernelDataBitWidth * config.coreInChannelCount * config.coreCount bits)
+  )
+  val requantizer_param_stream = slave(
+    genStreamPort(RequantizerParamBundle(config.requantizer_config).getBitsWidth * config.coreCount bits)
+  )
   val bias_data = slave(genStreamPort(config.biasDataBitWidth * config.coreOutChannelCount * config.coreCount bits))
-  val dout = master(genStreamPort(config.unitOutDataBitWidth * config.coreOutChannelCount * config.coreCount bits, useLast = true))
+  val dout = master(
+    genStreamPort(config.unitOutDataBitWidth * config.coreOutChannelCount * config.coreCount bits, useLast = true)
+  )
 
-  val padding_data = in SInt (config.coreInDataBitWidth bits)
-  val padding_size = in UInt (log2Up(config.maxPaddingSize + 1) bits)
+  val padding_data = (config.maxPaddingSize > 0) generate SInt(config.unitInDataBitWidth bits)
+  val padding_size = (config.maxPaddingSize > 0) generate UInt(log2Up(config.maxPaddingSize + 1) bits)
+  if (config.maxPaddingSize > 0) {
+    in(padding_data)
+    in(padding_size)
+  }
 
   val core = ConvCore(config)
   val padder = Input2DPadder(
