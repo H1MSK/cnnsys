@@ -6,9 +6,9 @@ import spinal.lib.fsm.{EntryPoint, State, StateMachine}
 
 import scala.language.postfixOps
 
-case class ConvCoreOutputTrimmer(config: ConvUnitConfig) extends Component {
-  val din = slave Stream Fragment(Vec(SInt(config.coreOutDataBitWidth bits), config.coreOutChannelCount))
-  val dout = master Stream Fragment(Vec(SInt(config.coreOutDataBitWidth bits), config.coreOutChannelCount))
+case class ConvUnitOutputTrimmer(config: ConvUnitConfig) extends Component {
+  val din = slave Stream Fragment(Vec(SInt(config.unitOutDataBitWidth bits), config.coreOutChannelCount * config.coreCount))
+  val dout = master Stream Fragment(Vec(SInt(config.unitOutDataBitWidth bits), config.coreOutChannelCount * config.coreCount))
   val line_width_sel =
     (config.supportedInputWidths.length > 1) generate Bits(log2Up(config.supportedInputWidths.length) bits)
 
