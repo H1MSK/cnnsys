@@ -15,51 +15,36 @@ case class Requantizer(
   val dout = master Stream Vec(SInt(config.dout_bitwidth bits), parallel_count)
   val param = in(RequantizerParamBundle(config))
 
-  private var last_payload = din.payload
-
-  val stage_count = (if (config.useScale) 1 else 0) +
-    (if (config.useOffset) 1 else 0) +
-    (if (config.useRightShift) 1 else 0) +
-    (if (config.shift_stage_output_bitwidth != config.dout_bitwidth) 1 else 0)
-
-  val controller = StreamController(stage_count)
-  controller << din
-  var current_stage = 0
+  var current_val = din.payload
 
   if (config.useScale) {
-    val scaled = Vec(last_payload.map(_ * param.scale))
-    last_payload = RegNextWhen(scaled, controller.en(current_stage), init = scaled.getZero)
-    current_stage += 1
+    val scaled = Vec(current_val.map(_ * param.scale))
+    current_val = scaled
     scaled.setName("scaled")
-    last_payload.setName("scale_stage")
   }
 
   if (config.useOffset) {
     val offset = Vec(
-      last_payload.map(x => if (config.useOffsetSaturation) x +| param.offset else x +^ param.offset)
+      current_val.map(x => if (config.useOffsetSaturation) x +| param.offset else x +^ param.offset)
     )
-    last_payload = RegNextWhen(offset, controller.en(current_stage), init = offset.getZero)
-    current_stage += 1
+    current_val = offset
     offset.setName("offset")
-    last_payload.setName("offset_stage")
   }
 
   if (config.useRightShift) {
-    val shifted = Vec(last_payload.map(_ >> param.shift_count))
-    last_payload = RegNextWhen(shifted, controller.en(current_stage), init = shifted.getZero)
-    current_stage += 1
+    val shifted = Vec(current_val.map(_ >> param.shift_count))
+    current_val = shifted
     shifted.setName("shifted")
-    last_payload.setName("shift_stage")
   }
 
-  assert(last_payload.head.getBitsWidth == config.shift_stage_output_bitwidth)
+  assert(current_val.head.getBitsWidth == config.shift_stage_output_bitwidth)
 
-  val delta = last_payload.head.getBitsWidth - config.dout_bitwidth
+  val delta = current_val.head.getBitsWidth - config.dout_bitwidth
   if (delta != 0) {
     val rounded =
       (if (delta > 0)
          Vec(
-           last_payload.zipWithIndex.map(t => {
+           current_val.zipWithIndex.map(t => {
              val x = t._1
              val i = t._2
              val x_shifted = x(delta, config.dout_bitwidth bits).setName("round_shifted_" + i)
@@ -76,14 +61,11 @@ case class Requantizer(
          )
        else
          Vec(
-           last_payload.map(_.resize(config.dout_bitwidth))
+           current_val.map(_.resize(config.dout_bitwidth))
          ))
-    last_payload = RegNextWhen(rounded, controller.en(current_stage), init = rounded.getZero)
-    current_stage += 1
+    current_val = rounded
     rounded.setName("rounded")
-    last_payload.setName("round_stage")
   }
 
-  controller >> dout
-  dout.payload := last_payload
+  dout <-/< din.translateWith(current_val)
 }
