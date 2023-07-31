@@ -71,7 +71,8 @@ case class ConvUnit(config: ConvUnitConfig) extends Component {
     padder.din.last := din_stream.payload.last
     padder.padding_size := padding_size
     padder.padding_data := Vec(padding_data, config.coreInChannelCount * config.coreCount)
-    padder.line_width_sel := line_width_sel
+    if (config.supportedInputWidths.length > 1)
+      padder.line_width_sel := line_width_sel
 
     recorder.din_frags << padder.dout
   } else {
@@ -86,7 +87,8 @@ case class ConvUnit(config: ConvUnitConfig) extends Component {
   recorder.dout_stream.payload.assignFromBits(core.dout.payload.asBits)
 
   recorder.dout_frags >> trimmer.din
-  trimmer.line_width_sel := line_width_sel
+  if (config.supportedInputWidths.length > 1)
+    trimmer.line_width_sel := line_width_sel
 
   dout.arbitrationFrom(trimmer.dout)
   dout.payload.data.assignFromBits(trimmer.dout.fragment.asBits)
@@ -95,7 +97,8 @@ case class ConvUnit(config: ConvUnitConfig) extends Component {
   connectStreamToFlow(kernel_data_stream, core.kernel_data)
   connectStreamToFlow(requantizer_param_stream, core.requantizer_param_in)
   connectStreamToFlow(bias_data, core.bias_data)
-  core.line_width_sel := line_width_sel
+  if (config.supportedInputWidths.length > 1)
+    core.line_width_sel := line_width_sel
 
   XilinxBusTagger.tag(din_stream, "din")
   XilinxBusTagger.tag(kernel_data_stream, "kernel_data")

@@ -66,7 +66,8 @@ case class ConvChannel(config: ConvUnitConfig) extends Component {
 
   inputWindow.shift_in.valid := lineBufferStreamController.en(0)
   inputWindow.shift_in.payload := din.payload
-  inputWindow.line_width_sel := line_width_sel
+  if (config.supportedInputWidths.length > 1)
+    inputWindow.line_width_sel := line_width_sel
 
   assert(inputWindow.window.length == kernel.head.regs.length)
 
