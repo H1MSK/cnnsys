@@ -3,7 +3,6 @@ package lib
 import spinal.core._
 import spinal.lib._
 
-import scala.collection.mutable
 import scala.language.postfixOps
 
 /** 2D window for input flow, for conv, polling, etc.
@@ -31,7 +30,7 @@ case class WindowedHistory2D[T <: Data](
 
   private var previous_shift_payload = shift_in.payload
 
-  private var lines = (0 until line_count).map(i => WindowedHistory(
+  private val lines = (0 until line_count).map(i => WindowedHistory(
     data_type = data_type,
     supported_input_widths = supported_input_widths,
     visible_input_count = visible_input_count,
