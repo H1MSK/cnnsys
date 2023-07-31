@@ -4,7 +4,7 @@ import cnnsys.conv_unit.{ConvUnit, ConvUnitConfig}
 import lib.quantizer.RequantizerParamData
 import spinal.core._
 import spinal.core.sim._
-import test.lib.TestInput2DPadder
+import test.lib.{TestAddTree, TestInput2DPadder}
 import test.lib.requantizer.TestRequantizerChain
 import test.{TestTask, TestTaskGenerator}
 
