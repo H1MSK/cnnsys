@@ -5,9 +5,11 @@ import test.TestTaskGenerator
 
 object TestAll extends TestTaskGenerator {
   def prepare(included: Boolean): Unit = {
+    requantizer.TestAll.prepare(included)
     StreamController.TestAll.prepare(included)
-    TestWindowedHistory2D.prepare(included)
+    TestAddTree.prepare(included)
     TestFragmentRecorder.prepare(included)
     TestInput2DPadder.prepare(included)
+    TestWindowedHistory2D.prepare(included)
   }
 }

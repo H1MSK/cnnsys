@@ -231,7 +231,7 @@ object TestConvUnit extends TestTaskGenerator {
           .map(col => {
             (0 until config.unitOutChannelCount)
               .map(oc => {
-                TestConvAddTree.addUp(
+                TestAddTree.addUp(
                   (0 until config.unitInChannelCount)
                     .flatMap(ic => {
                       (0 until config.kernelSize)
