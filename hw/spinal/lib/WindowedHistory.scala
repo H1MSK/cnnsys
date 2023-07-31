@@ -23,7 +23,7 @@ case class WindowedHistory[T <: Data](
   val shift_out = has_shift_output generate data_type()
 
   private val history = History[T](
-    RegNextWhen(shift_in.payload, shift_in.valid, init = shift_in.payload.getZero),
+    RegNextWhen(shift_in.payload, shift_in.valid, init = shift_in.payload.getZero).setName("history"),
     if (has_shift_output) supported_input_widths.last else visible_input_count,
     when = shift_in.valid,
     init = shift_in.payload.getZero
