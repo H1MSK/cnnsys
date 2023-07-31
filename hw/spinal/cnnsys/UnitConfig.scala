@@ -8,4 +8,5 @@ class UnitConfig {
     addressWidth = 10,
     dataWidth = 32
   )
+  var addTreeRegisterDistance: Int = 4
 }
