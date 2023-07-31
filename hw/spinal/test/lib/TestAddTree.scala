@@ -1,16 +1,16 @@
-package test.cnnsys.conv_unit
-import spinal.core.sim.{SimCompiled, _}
-import cnnsys.conv_unit.ConvAddTree
+package test.lib
 
-import scala.collection.mutable
-import scala.util.Random
+import lib.AddTree
 import spinal.core._
+import spinal.core.sim._
 import spinal.lib._
 import test.{TestTask, TestTaskGenerator}
 
 import scala.language.postfixOps
+import scala.util.Random
 
-object TestConvAddTree extends TestTaskGenerator {
+object TestAddTree extends TestTaskGenerator {
+  override def threadCount: Int = 1
   private def testFor(
       bw: Int,
       length: Int,
@@ -19,9 +19,9 @@ object TestConvAddTree extends TestTaskGenerator {
       saturate: Boolean,
       included: Boolean = true
   ): Unit = {
-    new TestTask[ConvAddTree](included) {
-      override def construct(): ConvAddTree =
-        ConvAddTree(
+    new TestTask[AddTree](included) {
+      override def construct(): AddTree =
+        AddTree(
           input_bit_width = bw,
           length = length,
           register_distance = dist,
@@ -30,56 +30,63 @@ object TestConvAddTree extends TestTaskGenerator {
           use_bias = true
         )
 
-      override def doSim(compiled: SimCompiled[ConvAddTree]): Unit = {
-        def setInput(dut: ConvAddTree) = {
-          val cur = Array.fill(length + 1)(Random.nextInt(1 << bw) - (1 << (bw - 1)))
-
+      override def doSim(compiled: SimCompiled[AddTree]): Unit = {
+        def setInput(dut: AddTree, input: Array[Int]): Unit = {
+          assert(dut.length + (if (dut.use_bias) 1 else 0) == input.length)
           for (i <- dut.din.payload.indices) {
-            dut.din.payload(i) #= cur(i)
+            dut.din.payload(i) #= input(i)
           }
-          dut.bias #= cur.last
-          cur
+          dut.bias #= input.last
         }
 
         compiled.doSim(s"Functional")(dut => {
           dut.clockDomain.forkStimulus(period = 10)
           dut.clockDomain.assertReset()
 
-          val sums = new mutable.Queue[Int]()
-          val inputs = new mutable.Queue[Array[Int]]()
-          var successCount = 0
+          val inputs = Array.fill(300)(
+            TestTask.randomSInt(bw bits, length + 1)
+          )
+          val sums = inputs.map(x => addUp(x, extend = extend, saturate = saturate, bw = bw))
 
-          var cur: Array[Int] = setInput(dut)
-          while (successCount < 300) {
+          var in_ptr = 0
+          var out_ptr = 0
+          var next_input = true
+          while (out_ptr < sums.length) {
+            sleep(1)
             dut.dout.ready #= Random.nextBoolean()
-            dut.din.valid #= Random.nextBoolean()
+            dut.din.valid #= (in_ptr < inputs.length || !next_input) && Random.nextBoolean()
+
+            if (next_input) {
+              if (in_ptr < inputs.length) {
+                next_input = false
+                setInput(dut, inputs(in_ptr))
+                in_ptr += 1
+              } else {
+                setInput(dut, Array.fill(length + 1)(0))
+              }
+            }
 
             dut.clockDomain.waitActiveEdge()
 
             if (dut.din.ready.toBoolean && dut.din.valid.toBoolean) {
-              sums.enqueue({
-                addUp(cur, extend, saturate, bw)
-              })
-              inputs.enqueue(cur)
-              cur = setInput(dut)
+              next_input = true
             }
 
             if (dut.dout.valid.toBoolean && dut.dout.ready.toBoolean) {
-              val sum = sums.dequeue()
-              val in = inputs.dequeue()
-
-              if (dut.dout.payload.toInt != sum)
+              val std = sums(out_ptr)
+              val out = dut.dout.payload.toInt
+              if (out != std) {
+                sleep(1)
                 simFailure(
-                  s"dout(${dut.dout.payload.toInt}b${dut.dout.payload.getBitsWidth}) != sum($sum). Inputs = ${in
-                      .mkString("(", ", ", ")")}, bitwidth = $bw"
+                  s"Unexpected out, want $std, but get $out\n" +
+                    s"Params: in_ptr=$in_ptr, out_ptr=$out_ptr, bw=$bw, length=$length, dist=$dist, extend=$extend, saturate=$saturate"
                 )
+              }
 
-              successCount += 1
+              out_ptr += 1
             }
 
           }
-
-          simSuccess()
         })
 
         // Under current implementation, LatencyAnalysis will use field algoIncrementale,

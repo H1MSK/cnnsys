@@ -1,5 +1,6 @@
 package cnnsys.conv_unit
 
+import lib.AddTree
 import lib.quantizer.{RequantizerChain, RequantizerParamBundle}
 import spinal.core._
 import spinal.lib._
@@ -28,7 +29,7 @@ case class ConvCore(config: ConvUnitConfig) extends Component {
 
   val addTrees =
     Array.fill(config.coreOutChannelCount)(
-      ConvAddTree(
+      AddTree(
         input_bit_width = config.convAddTreeInputDataBitWidth,
         length = config.coreInChannelCount * config.kernelSize * config.kernelSize,
         register_distance = config.addTreeRegisterDistance,
