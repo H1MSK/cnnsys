@@ -10,6 +10,7 @@ object TestAll extends TestTaskGenerator {
     TestAddTree.prepare(included)
     TestFragmentRecorder.prepare(included)
     TestInput2DPadder.prepare(included)
+    TestVectorOperator.prepare(included)
     TestWindowedHistory2D.prepare(included)
   }
 }

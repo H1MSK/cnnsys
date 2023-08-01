@@ -1,7 +1,7 @@
 package cnnsys.conv_unit
 
 import lib.StreamController.StreamController
-import lib.WindowedHistory2D
+import lib.{VectorOperator, WindowedHistory2D}
 import spinal.core._
 import spinal.lib._
 
@@ -71,14 +71,20 @@ case class ConvChannel(config: ConvUnitConfig) extends Component {
 
   assert(inputWindow.window.length == kernel.head.regs.length)
 
-  val convCalculator = Array.fill(config.coreOutChannelCount)(ConvCalculator(config))
+  val convCalculator = Array.fill(config.coreOutChannelCount)(VectorOperator(
+    din_type = SInt(config.coreInDataBitWidth bits),
+    kernel_type = SInt(config.coreKernelDataBitWidth bits),
+    dout_type = SInt(config.coreProductDataBitWidth bits),
+    length = config.kernelSize * config.kernelSize,
+    operation = (a: SInt, b: SInt) => a * b,
+  ))
 
   lineBufferStreamController.oready := convCalculator(0).din.ready
 
   (0 until config.coreOutChannelCount).foreach(i => {
     val cc = convCalculator(i)
 
-    cc.kernel_in := kernel(i).regs
+    cc.static_in := (if(config.convFlipKernel) Vec(kernel(i).regs.reverse) else kernel(i).regs)
     cc.din.payload := inputWindow.window
     cc.din.valid := lineBufferStreamController.ovalid
     dout.payload(i) := cc.dout.payload
