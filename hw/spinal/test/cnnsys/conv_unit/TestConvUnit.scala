@@ -168,6 +168,8 @@ object TestConvUnit extends TestTaskGenerator with TestTrait {
       new RequantizerParamData {
         scale = TestTask.randomSIntAsLong(config.requantizerScalerDataBitWidth bits)
         offset = 0
+
+        // To make shift_count smaller, upper bound is set to bitwidth rather than (1 << bitwidth)
         shift_count = Random.nextInt(config.requantizer_config.shift_bitwidth)
       }
     )
