@@ -50,7 +50,7 @@ case class Requantizer(
              val x_shifted = x(delta, config.dout_bitwidth bits).setName("round_shifted_" + i)
              val x_negative = x.msb.setName("round_negative_" + i)
 
-             val x_num_part = x_shifted(0, config.dout_bitwidth - 2 bits).setName("round_num_part_" + i)
+             val x_num_part = x_shifted(0, config.dout_bitwidth - 1 bits).setName("round_num_part_" + i)
              val x_saturated = Mux(x_negative, x_num_part.orR === False, x_num_part.andR === True).setName("round_saturated_" + i)
 
              val x_carry1 = x(delta - 1).setName("round_carry1_" + i)
