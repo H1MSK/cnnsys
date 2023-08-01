@@ -6,22 +6,12 @@ import spinal.core._
 import spinal.core.sim._
 import test.lib.{TestAddTree, TestInput2DPadder}
 import test.lib.requantizer.TestRequantizerChain
-import test.{TestTask, TestTaskGenerator}
+import test.{TestTask, TestTaskGenerator, TestTrait}
 
 import scala.language.postfixOps
 import scala.util.Random
 
-object TestConvUnit extends TestTaskGenerator {
-  def toBigInt(bitWidth: Int, dat: Array[Int]): BigInt =
-    dat.foldRight(BigInt(0))((x, ret) => (ret << bitWidth) | (x & ((1 << bitWidth) - 1)))
-
-  def fromBigInt(bitWidth: Int, dat: BigInt): Array[Int] = {
-    assert(bitWidth <= 32)
-    (0 until ((dat.bitLength + bitWidth - 1) / bitWidth))
-      .map(i => ((dat >> (i * bitWidth)) & ((1 << bitWidth) - 1)).toInt)
-      .toArray
-  }
-
+object TestConvUnit extends TestTaskGenerator with TestTrait {
   def loadKernelDataAndCheck(dut: ConvUnit, kernelData: Array[Array[Array[Int]]]): Unit = {
     val config = dut.config
     assert(kernelData.length == config.unitOutChannelCount)
