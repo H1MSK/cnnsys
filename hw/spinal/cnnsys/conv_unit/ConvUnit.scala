@@ -1,5 +1,6 @@
 package cnnsys.conv_unit
 
+import cnnsys.UnitTrait
 import lib.{FragmentRecorder, Input2DPadder}
 import lib.quantizer.RequantizerParamBundle
 import lib.utils.XilinxBusTagger
@@ -9,22 +10,7 @@ import spinal.lib.bus.amba4.axis.{Axi4Stream, Axi4StreamConfig}
 
 import scala.language.postfixOps
 
-case class ConvUnit(config: ConvUnitConfig) extends Component {
-  def genStreamPort(bitCount: BitCount, useLast: Boolean = false) = Axi4Stream(
-    Axi4StreamConfig((bitCount.value + 7) / 8, useLast = useLast)
-  )
-
-  def connectStreams[T1 <: Data, T2 <: Data](from: Stream[T1], to: Stream[T2]) = {
-    to.arbitrationFrom(from)
-    to.payload.assignFromBits(from.payload.asBits)
-  }
-
-  def connectStreamToFlow[T1 <: Data, T2 <: Data](from: Stream[T1], to: Flow[T2]) = {
-    to.valid := from.valid
-    from.ready := True
-    to.payload.assignFromBits(from.payload.asBits)
-  }
-
+case class ConvUnit(config: ConvUnitConfig) extends Component with UnitTrait {
   val line_width_sel =
     (config.supportedInputWidths.length > 1) generate Bits(log2Up(config.supportedInputWidths.length) bits)
   if (config.supportedInputWidths.length > 1) in(line_width_sel)
