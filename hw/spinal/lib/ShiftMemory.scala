@@ -7,7 +7,10 @@ import scala.language.postfixOps
 
 case class ShiftMemory[T <: Data](data_type: HardType[T], size: Int, enable_shift_out: Boolean) extends Component {
   val din = slave Flow data_type()
-  val dout = enable_shift_out generate master Flow data_type()
+  val dout = enable_shift_out generate Flow(data_type())
+  if (enable_shift_out) {
+    master(dout)
+  }
 
   /** History of din,
     * If din is forwardly inputted,
