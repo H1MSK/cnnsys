@@ -45,21 +45,21 @@ object TestTask {
   val tasks: mutable.Set[TestTaskBase] = mutable.Set[TestTaskBase]()
 
   def randomUInt(bitCount: BitCount): Int = {
-    assert(bitCount.value <= 31)
+    assert(bitCount.value <= 31, s"bitCount(${bitCount.value}) > 31")
     Random.nextInt(1 << bitCount.value)
   }
   def randomUIntAsLong(bitCount: BitCount): Long = {
-    assert(bitCount.value <= 63)
+    assert(bitCount.value <= 63, s"bitCount(${bitCount.value}) > 63")
     Random.nextLong(1L << bitCount.value)
   }
 
   def randomSInt(bitCount: BitCount): Int = {
-    assert(bitCount.value <= 31)
+    assert(bitCount.value <= 31, s"bitCount(${bitCount.value}) > 31")
     Random.nextInt(1 << bitCount.value) - (1 << (bitCount.value - 1))
   }
 
   def randomSIntAsLong(bitCount: BitCount): Long = {
-    assert(bitCount.value <= 63)
+    assert(bitCount.value <= 63, s"bitCount(${bitCount.value}) > 63")
     Random.nextLong(1L << bitCount.value) - (1L << (bitCount.value - 1))
   }
 
@@ -67,24 +67,24 @@ object TestTask {
   def randomSInt(bitCount: BitCount, length: Int): Array[Int] = Array.fill(length)(randomSInt(bitCount))
 
   def inRangeOfSInt(bitCount: BitCount, x: Int): Boolean = {
-    assert(bitCount.value < 32)
+    assert(bitCount.value < 32, s"bitCount(${bitCount.value}) > 31")
     val upper = 1 << (bitCount.value - 1)
     x >= -upper && x < upper
   }
 
   def inRangeOfSInt(bitCount: BitCount, x: Long): Boolean = {
-    assert(bitCount.value < 64)
+    assert(bitCount.value < 64, s"bitCount(${bitCount.value}) > 63")
     val upper = 1L << (bitCount.value - 1)
     x >= -upper && x < upper
   }
 
   def inRangeOfUInt(bitCount: BitCount, x: Int): Boolean = {
-    assert(bitCount.value < 32)
+    assert(bitCount.value < 32, s"bitCount(${bitCount.value}) > 31")
     x >= 0 && x < (1 << bitCount.value)
   }
 
   def inRangeOfUInt(bitCount: BitCount, x: Long): Boolean = {
-    assert(bitCount.value < 64)
+    assert(bitCount.value < 64, s"bitCount(${bitCount.value}) > 63")
     x >= 0 && x < (1L << bitCount.value)
   }
 }
