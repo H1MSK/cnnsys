@@ -5,7 +5,6 @@ import test.TestTaskGenerator
 object TestAll extends TestTaskGenerator {
   override def prepare(included: Boolean): Unit = {
     TestConvCoreOutputTrimmer.prepare(included)
-    TestConvKernelMem.prepare(included)
     TestConvUnit.prepare(included)
   }
 }

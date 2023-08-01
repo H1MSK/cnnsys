@@ -1,7 +1,7 @@
 package cnnsys.conv_unit
 
 import lib.StreamController.StreamController
-import lib.{VectorOperator, WindowedHistory2D}
+import lib.{ShiftMemory, VectorOperator, WindowedHistory2D}
 import spinal.core._
 import spinal.lib._
 
@@ -46,7 +46,11 @@ case class ConvChannel(config: ConvUnitConfig) extends Component {
   val kernel_din = slave Flow SInt(config.coreKernelDataBitWidth bits)
 
   val kernel = Seq.fill(config.coreOutChannelCount)(
-    ConvKernelMem(config.kernelSize * config.kernelSize, config.coreKernelDataBitWidth)
+    ShiftMemory(
+      data_type = SInt(config.coreKernelDataBitWidth bits),
+      size = config.kernelSize * config.kernelSize,
+      enable_shift_out = true
+      )
   )
   var last_din = kernel_din
   kernel.reverse.foreach(k => {
