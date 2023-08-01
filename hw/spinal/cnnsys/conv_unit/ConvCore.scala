@@ -33,8 +33,8 @@ case class ConvCore(config: ConvUnitConfig) extends Component {
         input_bit_width = config.convAddTreeInputDataBitWidth,
         length = config.coreInChannelCount * config.kernelSize * config.kernelSize,
         register_distance = config.addTreeRegisterDistance,
-        extend_bitwidth = config.convAddTreeExtendBitwidth,
-        saturate_output = config.convAddTreeSaturate,
+        extend_bitwidth = config.addTreeExtendBitwidth,
+        saturate_output = config.addTreeSaturate,
         use_bias = true
       )
     )

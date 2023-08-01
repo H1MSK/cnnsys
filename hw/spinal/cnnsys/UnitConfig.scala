@@ -9,4 +9,6 @@ class UnitConfig {
     dataWidth = 32
   )
   var addTreeRegisterDistance: Int = 4
+  var addTreeExtendBitwidth: Boolean = true
+  var addTreeSaturate: Boolean = true
 }

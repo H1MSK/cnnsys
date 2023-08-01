@@ -245,8 +245,8 @@ object TestConvUnit extends TestTaskGenerator {
                     })
                     .appended(param.biasData(oc))
                     .toArray,
-                  config.convAddTreeExtendBitwidth,
-                  config.convAddTreeSaturate,
+                  config.addTreeExtendBitwidth,
+                  config.addTreeSaturate,
                   config.convAddTreeInputDataBitWidth
                 )
               })

@@ -36,10 +36,8 @@ case class ConvUnitConfig() extends UnitConfig {
   def coreProductDataBitWidth: Int = coreInDataBitWidth + coreKernelDataBitWidth  // 16
 
   def convAddTreeInputDataBitWidth: Int = coreProductDataBitWidth
-  var convAddTreeExtendBitwidth: Boolean = true
-  var convAddTreeSaturate: Boolean = true
   def convAddTreeOutputDataBitWidth: Int = convAddTreeInputDataBitWidth +
-    (if (convAddTreeExtendBitwidth && !convAddTreeSaturate) log2Up(coreInChannelCount * kernelSize * kernelSize)
+    (if (addTreeExtendBitwidth && !addTreeSaturate) log2Up(coreInChannelCount * kernelSize * kernelSize)
      else 0)
 
   def requantizerInDataBitWidth: Int = convAddTreeOutputDataBitWidth
