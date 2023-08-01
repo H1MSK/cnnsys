@@ -13,31 +13,38 @@ import scala.util.Random
 object TestRequantizerChain extends TestTaskGenerator {
 //  override def threadCount: Int = 1
 
-  def requantize(x: Int, param: RequantizerParamData, config: RequantizerConfig): Long = {
-      var t = x * (if (config.useScale) param.scale else 1): Long
-      if (config.useOffset) {
-        t += param.offset
-        if (config.useOffsetSaturation && (t >> config.offset_stage_output_bitwidth) != (if (t >= 0) 0 else -1)) {
-          val max = 1 << config.offset_stage_output_bitwidth
-          t = if (t > 0) (max - 1) else -max
-        }
+  def requantize(x: Int, param: RequantizerParamData, config: RequantizerConfig, print: Boolean = false): Long = {
+    var print_fun = (x: String) => {}
+    if (print) print_fun = (x: String) => println(x)
+    var t = x * (if (config.useScale) param.scale else 1): Long
+    if (config.useOffset) {
+      t += param.offset
+      print_fun(s"Offsetted: ${t}")
+      if (config.useOffsetSaturation && (t >> (config.offset_stage_output_bitwidth - 1)) != (if (t >= 0) 0 else -1)) {
+        val max = 1L << (config.offset_stage_output_bitwidth - 1)
+        t = if (t > 0) (max - 1) else -max
+        print_fun(s"Saturated: ${t}")
       }
-      if (config.useRightShift) t >>= param.shift_count
+    }
+    if (config.useRightShift) t >>= param.shift_count
+    print_fun(s"Shifted: ${t}")
 
-      val delta = config.shift_stage_output_bitwidth - config.dout_bitwidth
-      if (delta <= 0) {
-        t
-      } else {
-        val sign = if (t < 0) -1 else 1
-        t = abs(t)
-        val answer_bits = t >> delta
-        val carry_bit = (t >> (delta - 1)) & 1
-        val top_bit = 1L << (config.dout_bitwidth - 1)
-        val answer =
-          if (answer_bits == (if (sign > 0) top_bit - 1 else top_bit)) answer_bits
-          else answer_bits + carry_bit
-        answer * sign
-      }
+    val delta = config.shift_stage_output_bitwidth - config.dout_bitwidth
+    if (delta <= 0) {
+      t
+    } else {
+      val sign = if (t < 0) -1 else 1
+      t = abs(t)
+      val answer_bits = t >> delta
+      val carry_bit = (t >> (delta - 1)) & 1
+      val top_bit = 1L << (config.dout_bitwidth - 1)
+      val answer =
+        if (answer_bits == (if (sign > 0) top_bit - 1 else top_bit)) answer_bits
+        else answer_bits + carry_bit
+
+      print_fun(s"Rounded: ${answer * sign}")
+      answer * sign
+    }
   }
 
   override def prepare(included: Boolean): Unit = {
