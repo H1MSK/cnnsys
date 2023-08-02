@@ -35,6 +35,22 @@ case class RequantizerConfig(
 
   def shift_stage_output_bitwidth: Int = offset_stage_output_bitwidth
 
+  def padding_bitwidth: Int = if (!useBundleBytePadding) 0
+  else {
+    val previous_bitwidth = scale_bitwidth + offset_bitwidth + shift_bitwidth
+    if (!bundlePaddingToPowOf2) {
+      if (previous_bitwidth % 8 != 0) 8 - previous_bitwidth % 8
+      else 0
+    } else {
+      val total_bitwidth = 1 << log2Up(previous_bitwidth)
+      total_bitwidth - previous_bitwidth
+    }
+  }
+
+  def hasRoundStage: Boolean = shift_stage_output_bitwidth != dout_bitwidth
+
+  def bundle_bitwidth: Int = scale_bitwidth + offset_bitwidth + shift_bitwidth + padding_bitwidth
+
   def bitWidthsToString: String =
     s"$din_bitwidth" +
       (if (useScale) s" -*($scale_bitwidth)> $scale_stage_output_bitwidth" else "") +
