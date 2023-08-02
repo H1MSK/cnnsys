@@ -5,8 +5,10 @@ import lib.quantizer.RequantizerConfig
 import spinal.core.log2Up
 
 case class MatMulUnitConfig() extends UnitConfig {
-  var inputWidth: Int = 16
-  var outputWidth: Int = 16
+  var coreInChannelCount: Int = 16
+  var coreOutChannelCount: Int = 16
+
+  val coreCount: Int = 1
 
   var coreInDataBitWidth: Int = 8
   var coreKernelDataBitWidth: Int = 8
@@ -16,7 +18,7 @@ case class MatMulUnitConfig() extends UnitConfig {
 
   def coreAddTreeInDataBitWidth: Int = coreMultiplicationResultDataBitWidth
   def coreAddTreeOutDataBitWidth: Int =
-    coreAddTreeInDataBitWidth + (if (addTreeExtendBitwidth && !addTreeSaturate) log2Up(inputWidth) else 0)
+    coreAddTreeInDataBitWidth + (if (addTreeExtendBitwidth && !addTreeSaturate) log2Up(coreInChannelCount) else 0)
 
   def biasDataBitWidth: Int = coreAddTreeInDataBitWidth
 

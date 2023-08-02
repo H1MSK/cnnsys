@@ -10,19 +10,19 @@ import spinal.lib._
 import scala.language.postfixOps
 
 case class MatMulUnit(config: MatMulUnitConfig) extends Component with UnitTrait {
-  val din_stream = slave(genStreamPort(config.coreInDataBitWidth * config.inputWidth bits, useLast = true))
-  val kernel_data_stream = slave(genStreamPort(config.coreInDataBitWidth * config.inputWidth bits))
+  val din_stream = slave(genStreamPort(config.coreInDataBitWidth * config.coreInChannelCount bits, useLast = true))
+  val kernel_data_stream = slave(genStreamPort(config.coreInDataBitWidth * config.coreInChannelCount bits))
   val requantizer_param_stream = slave(
     genStreamPort(RequantizerParamBundle(config.requantizer_config).getBitsWidth bits)
   )
-  val bias_data = slave(genStreamPort(config.biasDataBitWidth * config.outputWidth bits))
+  val bias_data = slave(genStreamPort(config.biasDataBitWidth * config.coreOutChannelCount bits))
 
-  val dout = master(slave(genStreamPort(config.coreOutDataBitWidth * config.outputWidth bits, useLast = true)))
+  val dout = master(slave(genStreamPort(config.coreOutDataBitWidth * config.coreOutChannelCount bits, useLast = true)))
 
   val core = MatMulCore(config)
   val recorder = FragmentRecorder(
-    Vec(SInt(config.coreInDataBitWidth bits), config.inputWidth),
-    Vec(SInt(config.coreOutDataBitWidth bits), config.outputWidth)
+    Vec(SInt(config.coreInDataBitWidth bits), config.coreInChannelCount),
+    Vec(SInt(config.coreOutDataBitWidth bits), config.coreOutChannelCount)
   )
 
   connectStreamToFlow(kernel_data_stream, core.kernel_data)

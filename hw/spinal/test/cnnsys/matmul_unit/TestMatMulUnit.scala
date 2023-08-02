@@ -14,8 +14,8 @@ import scala.util.Random
 object TestMatMulUnit extends TestTaskGenerator with TestTrait {
   def loadKernelDataAndCheck(dut: MatMulUnit, kernelData: Array[Array[Int]]): Unit = {
     val config = dut.config
-    assert(kernelData.length == config.outputWidth)
-    assert(kernelData.head.length == config.inputWidth)
+    assert(kernelData.length == config.coreOutChannelCount)
+    assert(kernelData.head.length == config.coreInChannelCount)
     assert(
       kernelData
         .map(
@@ -43,8 +43,8 @@ object TestMatMulUnit extends TestTaskGenerator with TestTrait {
     val config = dut.config
     val stored = dut.core.kernel.regs.reverse.map(_.map(_.toInt))
 
-    (0 until config.outputWidth).foreach(oc => {
-      (0 until config.inputWidth).foreach(ic => {
+    (0 until config.coreOutChannelCount).foreach(oc => {
+      (0 until config.coreInChannelCount).foreach(ic => {
         if (kernelData(oc)(ic) != stored(oc)(ic))
           simFailure(
             "Kernel data load failed\n" +
@@ -58,7 +58,7 @@ object TestMatMulUnit extends TestTaskGenerator with TestTrait {
   def loadRequantizerDataAndCheck(dut: MatMulUnit, requantizerData: Array[RequantizerParamData]): Unit = {
     val config = dut.config
     val rc = config.requantizer_config
-    assert(requantizerData.length == config.outputWidth)
+    assert(requantizerData.length == config.coreOutChannelCount)
     requantizerData.foreach(d => {
       assert(
         rc.scale_bitwidth <= 0 || TestTask.inRangeOfSInt(
@@ -121,7 +121,7 @@ object TestMatMulUnit extends TestTaskGenerator with TestTrait {
 
   def loadBiasDataAndCheck(dut: MatMulUnit, biasData: Array[Int]): Unit = {
     val config = dut.config
-    assert(biasData.length == config.outputWidth)
+    assert(biasData.length == config.coreOutChannelCount)
     biasData.foreach(x => {
       assert(TestTask.inRangeOfSInt(config.biasDataBitWidth bits, x))
     })
@@ -150,11 +150,11 @@ object TestMatMulUnit extends TestTaskGenerator with TestTrait {
   }
 
   case class Parameters(config: MatMulUnitConfig) {
-    var kernel = Array.fill(config.outputWidth)(
-      TestTask.randomSInt(config.unitKernelDataBitWidth bits, config.inputWidth)
+    var kernel = Array.fill(config.coreOutChannelCount)(
+      TestTask.randomSInt(config.unitKernelDataBitWidth bits, config.coreInChannelCount)
     )
 
-    var requants = Array.fill(config.outputWidth)(
+    var requants = Array.fill(config.coreOutChannelCount)(
       new RequantizerParamData {
         scale = TestTask.randomSIntAsLong(config.requantizer_config.scale_bitwidth bits)
         offset = TestTask.randomSIntAsLong(config.requantizer_config.offset_bitwidth bits)
@@ -163,7 +163,7 @@ object TestMatMulUnit extends TestTaskGenerator with TestTrait {
       }
     )
 
-    var biases = TestTask.randomSInt(config.biasDataBitWidth bits, config.outputWidth)
+    var biases = TestTask.randomSInt(config.biasDataBitWidth bits, config.coreOutChannelCount)
 
     def ApplyToDut(dut: MatMulUnit): Unit = {
       loadKernelDataAndCheck(dut, kernel)
@@ -210,8 +210,8 @@ object TestMatMulUnit extends TestTaskGenerator with TestTrait {
 
   override def prepare(included: Boolean): Unit = {
     val config = new MatMulUnitConfig() {
-      inputWidth = 2
-      outputWidth = 2
+      coreInChannelCount = 2
+      coreOutChannelCount = 2
     }
     new TestTask[MatMulUnit](included) {
       override def construct(): MatMulUnit = {
@@ -239,7 +239,7 @@ object TestMatMulUnit extends TestTaskGenerator with TestTrait {
             params.ApplyToDut(dut)
 
             val inputs = Array.fill(1024)(
-              TestTask.randomSInt(config.coreInDataBitWidth bits, config.inputWidth)
+              TestTask.randomSInt(config.coreInDataBitWidth bits, config.coreInChannelCount)
             )
 
             val standards = matmul(inputs, params)

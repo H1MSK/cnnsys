@@ -8,35 +8,35 @@ import spinal.lib._
 import scala.language.postfixOps
 
 case class MatMulCore(config: MatMulUnitConfig) extends Component {
-  val din = slave Stream Vec(SInt(config.coreInDataBitWidth bits), config.inputWidth)
-  val kernel_data = slave Flow Vec(SInt(config.coreInDataBitWidth bits), config.inputWidth)
+  val din = slave Stream Vec(SInt(config.coreInDataBitWidth bits), config.coreInChannelCount)
+  val kernel_data = slave Flow Vec(SInt(config.coreInDataBitWidth bits), config.coreInChannelCount)
   val requantizer_param_in = slave Flow RequantizerParamBundle(config.requantizer_config)
-  val bias_data = slave Flow Vec(SInt(config.biasDataBitWidth bits), config.outputWidth)
+  val bias_data = slave Flow Vec(SInt(config.biasDataBitWidth bits), config.coreOutChannelCount)
 
-  val dout = master Stream Vec(SInt(config.coreOutDataBitWidth bits), config.outputWidth)
+  val dout = master Stream Vec(SInt(config.coreOutDataBitWidth bits), config.coreOutChannelCount)
 
   val kernel = ShiftMemory(
-    data_type = Vec(SInt(config.coreInDataBitWidth bits), config.inputWidth),
-    size = config.outputWidth,
+    data_type = Vec(SInt(config.coreInDataBitWidth bits), config.coreInChannelCount),
+    size = config.coreOutChannelCount,
     enable_shift_out = false
   )
 
   val reg_bias: Vec[SInt] = RegNextWhen(bias_data.payload, bias_data.valid, init = bias_data.payload.getZero)
 
-  val multipliers = Array.fill(config.outputWidth)(
+  val multipliers = Array.fill(config.coreOutChannelCount)(
     VectorOperator(
       din_type = SInt(config.coreInDataBitWidth bits),
       kernel_type = SInt(config.coreKernelDataBitWidth bits),
       dout_type = SInt(config.coreMultiplicationResultDataBitWidth bits),
-      length = config.inputWidth,
+      length = config.coreInChannelCount,
       operation = (a: SInt, b: SInt) => a * b
     )
   )
 
-  val addTrees = Array.fill(config.outputWidth)(
+  val addTrees = Array.fill(config.coreOutChannelCount)(
     AddTree(
       input_bit_width = config.coreAddTreeInDataBitWidth,
-      length = config.outputWidth,
+      length = config.coreOutChannelCount,
       register_distance = config.addTreeRegisterDistance,
       extend_bitwidth = config.addTreeExtendBitwidth,
       saturate_output = config.addTreeSaturate,
@@ -46,7 +46,7 @@ case class MatMulCore(config: MatMulUnitConfig) extends Component {
 
   val requantizerChain =
     RequantizerChain(
-      chain_length = config.outputWidth,
+      chain_length = config.coreOutChannelCount,
       enableChainOut = false,
       parallel_count = 1,
       config = config.requantizer_config
