@@ -9,7 +9,8 @@ object ProjectConfig {
   def spinal = SpinalConfig(
     targetDirectory = "hw/gen",
     defaultConfigForClockDomains = ClockDomainConfig(
-      resetActiveLevel = HIGH
+      resetActiveLevel = HIGH,
+      resetKind = SYNC
     ),
     defaultClockDomainFrequency = FixedFrequency(200 MHz),
 //    dumpWave = DumpWaveConfig(depth = 1000),
@@ -17,7 +18,9 @@ object ProjectConfig {
   )
 
   def sim = SimConfig
-    .withConfig(spinal)
+    .withConfig(spinal.copy(defaultConfigForClockDomains = ClockDomainConfig(
+      resetActiveLevel = HIGH
+    )))
     .withVcdWave
     .workspacePath("sim_out")
     .allOptimisation

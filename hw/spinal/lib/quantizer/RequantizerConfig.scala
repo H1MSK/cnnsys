@@ -50,6 +50,8 @@ case class RequantizerConfig(
 
   def hasRoundStage: Boolean = shift_stage_output_bitwidth != dout_bitwidth
 
+  def stage_count: Int = (useScale.toInt + useOffset.toInt + useRightShift.toInt + hasRoundStage.toInt)
+
   def bundle_bitwidth: Int = scale_bitwidth + offset_bitwidth + shift_bitwidth + padding_bitwidth
 
   def bitWidthsToString: String =
