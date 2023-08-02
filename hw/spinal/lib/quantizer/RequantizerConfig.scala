@@ -9,7 +9,8 @@ case class RequantizerConfig(
     useOffset: Boolean = true,
     useRightShift: Boolean = true,
     useOffsetSaturation: Boolean = true,
-    useBundleBytePadding: Boolean = true
+    useBundleBytePadding: Boolean = true,
+    bundlePaddingToPowOf2: Boolean = true
 ) {
   assert(
     din_bitwidth > 0 &&
