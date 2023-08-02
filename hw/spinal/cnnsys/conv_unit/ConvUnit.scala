@@ -22,7 +22,7 @@ case class ConvUnit(config: ConvUnitConfig) extends Component with UnitTrait {
     genStreamPort(config.unitKernelDataBitWidth * config.coreInChannelCount * config.coreCount bits)
   )
   val requantizer_param_stream = slave(
-    genStreamPort(RequantizerParamBundle(config.requantizer_config).getBitsWidth * config.coreCount bits)
+    genStreamPort(config.requantizer_config.bundle_bitwidth * config.coreCount bits)
   )
   val bias_data = slave(genStreamPort(config.biasDataBitWidth * config.coreOutChannelCount * config.coreCount bits))
   val dout = master(
