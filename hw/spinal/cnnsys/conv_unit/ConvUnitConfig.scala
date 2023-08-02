@@ -13,9 +13,10 @@ case class ConvUnitConfig() extends UnitConfig {
   var coreCount: Int = 1
 
   var coreInChannelCount: Int = 8
-  var coreOutChannelCount: Int = 8
+  var coreOutChannelCount: Int = 4
 
   def unitInChannelCount: Int = coreInChannelCount * coreCount
+
   def unitOutChannelCount: Int = coreOutChannelCount * coreCount
 
   // TODO: Annotation
@@ -30,18 +31,23 @@ case class ConvUnitConfig() extends UnitConfig {
   var coreOutDataBitWidth: Int = 8
 
   def unitInDataBitWidth: Int = coreInDataBitWidth
+
   def unitKernelDataBitWidth: Int = coreKernelDataBitWidth
+
   def unitOutDataBitWidth: Int = coreOutDataBitWidth
 
-  def coreProductDataBitWidth: Int = coreInDataBitWidth + coreKernelDataBitWidth  // 16
+  def coreProductDataBitWidth: Int = coreInDataBitWidth + coreKernelDataBitWidth // 16
 
   def convAddTreeInputDataBitWidth: Int = coreProductDataBitWidth
+
   def convAddTreeOutputDataBitWidth: Int = convAddTreeInputDataBitWidth +
     (if (addTreeExtendBitwidth && !addTreeSaturate) log2Up(coreInChannelCount * kernelSize * kernelSize)
-     else 0)
+    else 0)
 
   def requantizerInDataBitWidth: Int = convAddTreeOutputDataBitWidth
+
   var requantizerScalerDataBitWidth: Int = 32 - requantizerInDataBitWidth
+
   def requantizerOutDataBitWidth: Int = coreOutDataBitWidth
 
   def requantizer_config = RequantizerConfig(
@@ -51,31 +57,16 @@ case class ConvUnitConfig() extends UnitConfig {
     useOffset = false,
     useOffsetSaturation = false
   )
+
   def requantizerShifterDataBitWidth: Int = requantizer_config.shift_bitwidth
 
   def biasDataBitWidth: Int = coreProductDataBitWidth
 
-  def coreInStreamConfig = Axi4StreamConfig(
-    dataWidth = unitInDataBitWidth * coreInChannelCount * coreCount,
-    idWidth = -1,
-    destWidth = -1,
-    userWidth = -1,
-    useStrb = false,
-    useKeep = true,
-    useLast = true,
-    useId = false,
-    useDest = false,
-    useUser = false
-  )
-  val unitOutStreamConfig = coreInStreamConfig.copy(
-    dataWidth = 1024 / 8,
-    destWidth = 2,
-    useDest = true,
-    useLast = false,
-    useKeep = true
-  )
-
-  // Dilation and step can be scheduled in software
+  def inputBusBitWidth: Int = coreCount * coreInChannelCount * unitInDataBitWidth
+  def kernelBusBitWidth: Int = coreCount * coreInChannelCount * unitKernelDataBitWidth
+  def requantizerBusBitWidth: Int = coreCount * requantizer_config.bundle_bitwidth
+  def biasBusBitWidth: Int = coreCount * coreOutChannelCount * biasDataBitWidth
+  def outputBusBitWidth: Int = coreCount * coreOutChannelCount * unitOutDataBitWidth
 
   assert(coreInDataBitWidth * coreInChannelCount * coreCount % 8 == 0)
   if (supportedInputWidths(0) < kernelSize)
@@ -85,8 +76,31 @@ case class ConvUnitConfig() extends UnitConfig {
       SpinalError("Supported input widths should be in strict ascent order")
   })
 
-  val maxInputWidth: Int = supportedInputWidths.last
-
+  override def toString: String =
+    s"ConvUnitConfig {\n" +
+      s"  convFlipKernel = $convFlipKernel\n" +
+      s"  kernelSize = $kernelSize\n" +
+      s"  supportedInputWidths = ${supportedInputWidths.mkString("(", ", ", ")")}\n" +
+      s"  maxPaddingSize = $maxPaddingSize\n" +
+      "\n" +
+      s"  coreCount = $coreCount\n" +
+      s"  coreInChannelCount = $coreInChannelCount\n" +
+      s"  coreOutChannelCount = $coreOutChannelCount\n" +
+      "\n" +
+      s"  coreInDataBitWidth = $coreInDataBitWidth\n" +
+      s"  coreKernelDataBitWidth = $coreKernelDataBitWidth\n" +
+      s"  biasDataBitWidth = $biasDataBitWidth\n" +
+      s"  requantizerScalerDataBitWidth = $requantizerScalerDataBitWidth\n" +
+      s"  requantizerShifterDataBitWidth = $requantizerShifterDataBitWidth\n" +
+      s"  requantizerPadderDataBitWidth = ${requantizer_config.padding_bitwidth}\n" +
+      s"  coreOutDataBitWidth = $coreOutDataBitWidth\n" +
+      "\n" +
+      s"  inputBusBitWidth = $inputBusBitWidth\n" +
+      s"  kernelBusBitWidth = $kernelBusBitWidth\n" +
+      s"  requantizerBusBitWidth = $requantizerBusBitWidth\n" +
+      s"  biasBusBitWidth = $biasBusBitWidth\n" +
+      s"  outputBusBitWidth = $outputBusBitWidth\n" +
+      "}\n"
 }
 
 object ConvUnitConfig {
