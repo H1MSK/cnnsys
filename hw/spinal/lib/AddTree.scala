@@ -74,22 +74,28 @@ case class AddTree(
     var result = inputs.payload.head
 
     if (saturate_output) {
-      val saturated = result.sat(result.getBitsWidth - input_bit_width)
-      result = saturated
+      val saturated = result.sat(result.getBitsWidth - input_bit_width).setName("saturated_result")
+      val saturate_controller = StreamController(1).setName("saturate_controller")
+      saturate_controller << inputs
+      saturate_controller >> dout
+      val reg_saturated =
+        RegNextWhen(saturated, saturate_controller.en(0), init = saturated.getZero).setName("reg_saturated")
+      dout.payload := reg_saturated
+    } else {
+      dout.arbitrationFrom(inputs)
+      dout.payload := result
     }
-
-    dout << inputs.translateWith(result)
 
   } else {
     var result = inputs.payload.reduceBalancedTree(add).setName("reduce_result")
     if (extend_bitwidth && saturate_output) {
-      val saturated = result.sat(result.getBitsWidth - input_bit_width).setName("saturated")
+      val saturated = result.sat(result.getBitsWidth - input_bit_width).setName("saturated_result")
       result = saturated
     }
 
     val controller = StreamController(1)
     controller << inputs
-    val reg_result = RegNextWhen(result, controller.en(0), init = result.getZero)
+    val reg_result = RegNextWhen(result, controller.en(0), init = result.getZero).setName("reg_result")
     controller >> dout
     dout.payload := reg_result
   }
