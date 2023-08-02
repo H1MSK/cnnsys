@@ -99,4 +99,9 @@ case class AddTree(
     controller >> dout
     dout.payload := reg_result
   }
+  setDefinitionName(
+    s"AddTree_${input_bit_width}b_${length}i_${register_distance}d" +
+      s"_${extend_bitwidth.toInt * 8 + saturate_output.toInt * 4 + use_bias.toInt * 2 + enable_recurse.toInt * 1}f",
+    noMerge = false
+  )
 }
