@@ -1,66 +1,81 @@
 package cnnsys
 
-import cnnsys.conv_unit.{ConvCore, ConvUnitConfig}
-import lib.FragmentRecorder
-import lib.quantizer.RequantizerParamBundle
+import cnnsys.conv_unit.{ConvUnit, ConvUnitConfig}
+import cnnsys.matmul_unit.{MatMulUnit, MatMulUnitConfig}
 import lib.utils.XilinxBusTagger
 import spinal.core._
 import spinal.lib._
-import spinal.lib.bus.amba4.axis.{Axi4Stream, Axi4StreamConfig}
 
 import scala.language.postfixOps
 
-case class System() extends Component {
-  def genStreamPort(bitCount: BitCount, useLast: Boolean = false) = Axi4Stream(
-    Axi4StreamConfig((bitCount.value + 7) / 8, useLast = useLast)
-  )
+case class System() extends Component with UnitTrait {
+  val conv_config = ConvUnitConfig.default
+  val matmul_config = MatMulUnitConfig.default
 
-  def connect[T1 <: Data, T2 <: Data](from: Stream[T1], to: Stream[T2]) = {
-    to.arbitrationFrom(from)
-    to.payload.assignFromBits(from.payload.asBits)
+  def gcd(x: Int, y: Int): Int = if (y == 0) x else gcd(y, x % y)
+  def assertMinEqualsGcd(x: Int, y: Int): Unit = {
+    assert(Math.min(x, y) == gcd(x, y), s"min($x, $y) != gcd($x, $y)")
   }
 
-  def connect[T1 <: Data, T2 <: Data](from: Stream[T1], to: Flow[T2]) = {
-    to.valid := from.valid
-    from.ready := True
-    to.payload.assignFromBits(from.payload.asBits)
+  assertMinEqualsGcd(conv_config.inputBusBitWidth, matmul_config.inputBusBitWidth)
+  assertMinEqualsGcd(conv_config.kernelBusBitWidth, matmul_config.kernelBusBitWidth)
+  assertMinEqualsGcd(conv_config.biasBusBitWidth, matmul_config.biasBusBitWidth)
+  assertMinEqualsGcd(conv_config.requantizerBusBitWidth, matmul_config.requantizerBusBitWidth)
+  assertMinEqualsGcd(conv_config.outputBusBitWidth, matmul_config.outputBusBitWidth)
+
+  print(s"Configs:\n$conv_config\n$matmul_config")
+
+  val conv_din_stream = slave(genStreamPort(conv_config.inputBusBitWidth bits, useLast = true))
+  val conv_kernel_data_stream = slave(genStreamPort(conv_config.kernelBusBitWidth bits))
+  val conv_requantizer_param_stream = slave(genStreamPort(conv_config.requantizerBusBitWidth bits))
+  val conv_bias_data = slave(genStreamPort(conv_config.biasBusBitWidth bits))
+  val conv_dout = master(genStreamPort(conv_config.outputBusBitWidth bits, useLast = true))
+  val conv_line_width_sel =
+    (conv_config.supportedInputWidths.length > 1) generate Bits(log2Up(conv_config.supportedInputWidths.length) bits)
+  val conv_padding_data = (conv_config.maxPaddingSize > 0) generate SInt(conv_config.unitInDataBitWidth bits)
+  val conv_padding_size = (conv_config.maxPaddingSize > 0) generate UInt(log2Up(conv_config.maxPaddingSize + 1) bits)
+
+  val matmul_din_stream = slave(genStreamPort(matmul_config.inputBusBitWidth bits, useLast = true))
+  val matmul_kernel_data_stream = slave(genStreamPort(matmul_config.kernelBusBitWidth bits))
+  val matmul_requantizer_param_stream = slave(genStreamPort(matmul_config.requantizerBusBitWidth bits))
+  val matmul_bias_data = slave(genStreamPort(matmul_config.biasBusBitWidth bits))
+  val matmul_dout = master(genStreamPort(matmul_config.outputBusBitWidth bits, useLast = true))
+
+
+  val conv_unit = ConvUnit(conv_config)
+  val matmul_unit = MatMulUnit(matmul_config)
+
+  conv_din_stream >> conv_unit.din_stream
+  conv_kernel_data_stream >> conv_unit.kernel_data_stream
+  conv_requantizer_param_stream >> conv_unit.requantizer_param_stream
+  conv_bias_data >> conv_unit.bias_data
+  conv_dout << conv_unit.dout
+  if (conv_config.supportedInputWidths.length > 1) {
+    in(conv_line_width_sel)
+    conv_unit.line_width_sel := conv_line_width_sel
   }
-  val config = ConvUnitConfig.default
+  if (conv_config.maxPaddingSize > 0) {
+    in(conv_padding_data)
+    in(conv_padding_size)
+    conv_unit.padding_data := conv_padding_data
+    conv_unit.padding_size := conv_padding_size
+  }
 
-  val line_width_sel = in Bits (log2Up(config.supportedInputWidths.length) bits)
+  matmul_din_stream >> matmul_unit.din_stream
+  matmul_kernel_data_stream >> matmul_unit.kernel_data_stream
+  matmul_requantizer_param_stream >> matmul_unit.requantizer_param_stream
+  matmul_bias_data >> matmul_unit.bias_data
+  matmul_dout << matmul_unit.dout
 
-  val din_stream = slave(genStreamPort(config.unitInDataBitWidth * config.coreInChannelCount bits, useLast = true))
-  val kernel_data_stream = slave(genStreamPort(config.unitKernelDataBitWidth * config.coreInChannelCount bits))
-  val requantizer_param_stream = slave(genStreamPort(RequantizerParamBundle(config.requantizer_config).getBitsWidth bits))
-  val bias_data = slave(genStreamPort(config.biasDataBitWidth * config.coreOutChannelCount bits))
-  val dout = master(genStreamPort(config.coreOutDataBitWidth * config.coreOutChannelCount bits, useLast = true))
+  XilinxBusTagger.tag(conv_din_stream, "conv_din")
+  XilinxBusTagger.tag(conv_kernel_data_stream, "conv_kernel")
+  XilinxBusTagger.tag(conv_requantizer_param_stream, "conv_requantizer")
+  XilinxBusTagger.tag(conv_bias_data, "conv_bias")
+  XilinxBusTagger.tag(conv_dout, "conv_dout")
+  XilinxBusTagger.tag(matmul_din_stream, "matmul_din")
+  XilinxBusTagger.tag(matmul_kernel_data_stream, "matmul_kernel")
+  XilinxBusTagger.tag(matmul_requantizer_param_stream, "matmul_requantizer")
+  XilinxBusTagger.tag(matmul_bias_data, "matmul_bias")
+  XilinxBusTagger.tag(matmul_dout, "matmul_dout")
 
-
-  val core = ConvCore(config)
-  val recorder = FragmentRecorder(Bits(core.din.payload.getBitsWidth bits), Bits(core.dout.payload.getBitsWidth bits))
-
-  recorder.din_frags.arbitrationFrom(din_stream)
-  recorder.din_frags.fragment := din_stream.payload.data
-  recorder.din_frags.last := din_stream.payload.last
-
-  core.din.arbitrationFrom(recorder.din_stream)
-  core.din.payload.assignFromBits(recorder.din_stream.payload)
-
-  recorder.dout_stream.arbitrationFrom(core.dout)
-  recorder.dout_stream.payload.assignFromBits(core.dout.payload.asBits)
-
-  dout.arbitrationFrom(recorder.dout_frags)
-  dout.payload.data.assignFromBits(recorder.dout_frags.fragment)
-  dout.payload.last := recorder.dout_frags.last
-
-  connect(kernel_data_stream, core.kernel_data)
-  connect(requantizer_param_stream, core.requantizer_param_in)
-  connect(bias_data, core.bias_data)
-  core.line_width_sel := line_width_sel
-
-  XilinxBusTagger.tag(din_stream, "din")
-  XilinxBusTagger.tag(kernel_data_stream, "kernel_data")
-  XilinxBusTagger.tag(requantizer_param_stream, "requantizer_data")
-  XilinxBusTagger.tag(bias_data, "bias_data")
-  XilinxBusTagger.tag(dout, "dout")
 }
